@@ -1,0 +1,20 @@
+*.*~
+*.swp
+.gradle
+*.log
+.DS_Store
+
+**/build/*
+
+**/.DS_Store
+
+**/bin/**/*.class
+
+#Eclipse Files
+**/.classpath
+**/.project
+**/.settings/*
+**/.springBeans
+
+#Ignore .gitignore from subdirectories
+*/.gitignore
