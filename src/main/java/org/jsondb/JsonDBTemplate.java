@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.CharacterCodingException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,6 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.jxpath.JXPathContext;
+import org.jsondb.annotation.Document;
+import org.jsondb.crypto.CryptoUtil;
 import org.jsondb.crypto.ICipher;
 import org.jsondb.io.JsonFileLockException;
 import org.jsondb.io.JsonReader;
@@ -233,6 +236,25 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
+  private <T> String determineEntityCollectionName(T obj) {
+    return determineCollectionName(obj.getClass());
+  }
+
+  private String determineCollectionName(Class<?> entityClass) {
+    if (entityClass == null) {
+        throw new InvalidJsonDbApiUsageException(
+              "No class parameter provided, entity collection can't be determined");
+    }
+    Document doc = entityClass.getAnnotation(Document.class);
+    if (null == doc) {
+      throw new InvalidJsonDbApiUsageException(
+          "Entity '" + entityClass.getSimpleName() + "' is not annotated with annotation @Document");
+    }
+    String collectionName = doc.collection();
+
+    return collectionName;
+  }
+  
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#addCollectionFileChangeListener(org.jsondb.CollectionFileChangeListener)
    */
@@ -247,19 +269,9 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#removeCollectionFileChangeListener(org.jsondb.CollectionFileChangeListener)
    */
   @Override
-  public void removeCollectionFileChangeListener(
-      CollectionFileChangeListener listener) {
+  public void removeCollectionFileChangeListener(CollectionFileChangeListener listener) {
     // TODO Auto-generated method stub
 
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#getCollectionName(java.lang.Class)
-   */
-  @Override
-  public String getCollectionName(Class<?> entityClass) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   /* (non-Javadoc)
@@ -300,58 +312,68 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#getCollectionNames()
-   */
   @Override
   public Set<String> getCollectionNames() {
-    // TODO Auto-generated method stub
-    return null;
+    return collectionsRef.get().keySet();
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#getCollection(java.lang.Class)
-   */
+  @Override
+  public String getCollectionName(Class<?> entityClass) {
+    return this.determineCollectionName(entityClass);
+  }
+  
   @Override
   public <T> List<T> getCollection(Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return null;
+    String collectionName = determineCollectionName(entityClass);
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if (null == collection) {
+      createCollection(collectionName);
+      collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    }
+
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    List<T> newCollection = new ArrayList<T>();
+    for (T document : collection.values()) {
+      Object obj = Util.deepCopy(document);
+      if(encrypted && cmd.hasSecret() && null != obj) {
+        CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+      }
+      newCollection.add((T) obj);
+    }
+    return newCollection;
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#collectionExists(java.lang.Class)
-   */
   @Override
   public <T> boolean collectionExists(Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return false;
+    return collectionExists(determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#collectionExists(java.lang.String)
-   */
   @Override
   public boolean collectionExists(String collectionName) {
-    // TODO Auto-generated method stub
-    return false;
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    if(null == collectionMeta) {
+      return false;
+    }
+    collectionMeta.getCollectionLock().readLock().lock();
+    try {
+      return collectionsRef.get().containsKey(collectionName);
+    } finally {
+      collectionMeta.getCollectionLock().readLock().unlock();
+    }
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#isCollectionReadonly(java.lang.Class)
+  /**
+   * A collection can be readonly if its schema version does not match the actualSchema version
    */
   @Override
   public <T> boolean isCollectionReadonly(Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return false;
+    return isCollectionReadonly(determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#isCollectionReadonly(java.lang.String)
-   */
   @Override
   public <T> boolean isCollectionReadonly(String collectionName) {
-    // TODO Auto-generated method stub
-    return false;
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    return cmd.isReadOnly();
   }
 
   /* (non-Javadoc)

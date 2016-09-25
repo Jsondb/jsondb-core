@@ -66,14 +66,6 @@ public interface JsonDBOperations {
   void removeCollectionFileChangeListener(CollectionFileChangeListener listener);
 
   /**
-   * The collection name used for the specified class by this template.
-   *
-   * @param entityClass must not be {@literal null}.
-   * @return
-   */
-  String getCollectionName(Class<?> entityClass);
-
-  /**
    * Create an uncapped collection with a name based on the provided entity class.
    *
    * @param entityClass class that determines the collection to create
@@ -105,6 +97,14 @@ public interface JsonDBOperations {
    */
   Set<String> getCollectionNames();
 
+  /**
+   * The collection name used for the specified class by this template.
+   *
+   * @param entityClass must not be {@literal null}.
+   * @return
+   */
+  String getCollectionName(Class<?> entityClass);
+  
   /**
    * Get a collection by name, creating it if it doesn't exist.
    * The returned collection will be a new copy of the existing collection
