@@ -1,0 +1,15 @@
+machine:
+  java:
+    version: oraclejdk8
+
+checkout:
+  post:
+    - git fetch --tags
+    
+## Customize dependencies
+dependencies:
+  override:
+    - ./buildsupport/gradlewrapper/gradlew dependencies
+test:
+  override:
+    - ./buildsupport/gradlewrapper/gradlew test
