@@ -1,4 +1,4 @@
-[![Circle CI](https://circleci.com/gh/FarooqKhan/jsondb.svg?style=shield&circle-token=66ee8cf226d0e278f3f4162f687606ce11485915)](https://circleci.com/gh/FarooqKhan/jsondb)
+[![Circle CI](https://circleci.com/gh/FarooqKhan/jsondb.svg?style=shield&circle-token=ead22be4576932974f9fda267a4cc31d883f5927)](https://circleci.com/gh/FarooqKhan/jsondb)
 
 
 JsonDB is a pure java database that stores its data as Json Files.
