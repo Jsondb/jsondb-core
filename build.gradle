@@ -18,6 +18,12 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
+plugins {
+    id 'net.saliman.cobertura' version '2.3.1'
+    id 'com.github.kt3k.coveralls' version '2.6.3'
+}
+
 description = 'A JAVA JSON Document database.'
 
 apply plugin: "java"
@@ -48,6 +54,8 @@ dependencies {
           "org.springframework:spring-beans:4.3.3.RELEASE",
           "org.springframework:spring-test:4.3.3.RELEASE"
 }
+
+cobertura.coverageFormats = ['html', 'xml'] // coveralls plugin depends on xml format report
 
 eclipse {
   project {
