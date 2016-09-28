@@ -1,9 +1,5 @@
 language: java
 
-env:
-  global:
-    - COVERALLS_REPO_TOKEN=KaiaNcXBfP2cda4WAV2tMJyqepXXLei5l
-
 jdk:
   - oraclejdk8
 
