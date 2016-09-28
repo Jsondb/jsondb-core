@@ -1,2 +1,5 @@
+jdk:
+  - oraclejdk8
+
 script:
-  ./buildsupport/gradlewrapper/gradlew clean build
+  - ./buildsupport/gradlewrapper/gradlew clean build
