@@ -7,4 +7,4 @@ script:
   - ./buildsupport/gradlewrapper/gradlew clean build
 
 after_success:
-  - ./buildsupport/gradlewrapper/gradlew cobertura coveralls
+  - ./buildsupport/gradlewrapper/gradlew jacocoTestReport coveralls

@@ -20,7 +20,8 @@
  */
 
 plugins {
-    id 'net.saliman.cobertura' version '2.3.1'
+    //id 'net.saliman.cobertura' version '2.3.1'
+    id 'jacoco'
     id 'com.github.kt3k.coveralls' version '2.6.3'
 }
 
@@ -55,7 +56,14 @@ dependencies {
           "org.springframework:spring-test:4.3.3.RELEASE"
 }
 
-cobertura.coverageFormats = ['html', 'xml'] // coveralls plugin depends on xml format report
+//cobertura.coverageFormats = ['html', 'xml'] // coveralls plugin depends on xml format report
+
+jacocoTestReport {
+    reports {
+        xml.enabled = true // coveralls plugin depends on xml format report
+        html.enabled = true
+    }
+}
 
 eclipse {
   project {
@@ -80,4 +88,3 @@ cleanEclipseJdt {
   }
 }
 tasks.eclipse.dependsOn(cleanEclipse)
-
