@@ -1,0 +1,2 @@
+script:
+  ./buildsupport/gradlewrapper/gradlew clean build
