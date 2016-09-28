@@ -11,4 +11,4 @@ script:
   - ./buildsupport/gradlewrapper/gradlew clean build
 
 after_success:
-  - ./gradlew cobertura coveralls
+  - ./buildsupport/gradlewrapper/gradlew cobertura coveralls
