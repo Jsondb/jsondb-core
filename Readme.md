@@ -8,3 +8,5 @@ A very small memory footprint, runs embedded within your java program.
 Provides APIs that are very similar and inspired by MongoDB.
 
 Provides a Apache JxPath based query system.
+
+# Note: Still under development not ready for use
