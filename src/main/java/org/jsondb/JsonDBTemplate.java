@@ -412,22 +412,38 @@ public class JsonDBTemplate implements JsonDBOperations {
     return null;
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findAll(java.lang.Class)
-   */
   @Override
   public <T> List<T> findAll(Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return null;
+    return findAll(determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findAll(java.lang.String)
-   */
+  @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> findAll(String collectionName) {
-    // TODO Auto-generated method stub
-    return null;
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if(null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+    }
+    cmd.getCollectionLock().readLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+      List<T> newCollection = new ArrayList<T>();
+      for (T document : collection.values()) {
+        T obj = (T)Util.deepCopy(document);
+        if(encrypted && cmd.hasSecret() && null!=obj){
+          CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+          newCollection.add(obj);
+        } else{
+          newCollection.add((T) obj);
+        }
+      }
+      return newCollection;
+    } finally {
+      cmd.getCollectionLock().readLock().unlock();
+    }
   }
 
   /* (non-Javadoc)

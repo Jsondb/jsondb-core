@@ -91,8 +91,8 @@ public class InitializeDBTests {
 
     Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
     assertTrue(collectionNames.contains("instances"));
-    //List<Instance> instances = jsonDBTemplate.findAll(Instance.class);
-    //int size = instances.size();
+    List<Instance> instances = jsonDBTemplate.findAll(Instance.class);
+    int size = instances.size();
 
     //Add more computers directly to the computers.json file.
     List<Instance> instances1 = new ArrayList<Instance>();
@@ -101,7 +101,8 @@ public class InitializeDBTests {
       int id = 11 + i;
       inst.setId(String.format("%06d", id));
       inst.setHostname("ec2-54-191-" + id);
-      inst.setPrivateKey("b87eb02f5dd7e5232d7b0fc30a5015e4");
+      //Private key is encrypted form of: b87eb02f5dd7e5232d7b0fc30a5015e4
+      inst.setPrivateKey("HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES");
       inst.setPublicKey("d3aa045f71bf4d1dffd2c5f485a4bc1d");
       instances1.add(inst);
     }
@@ -111,9 +112,8 @@ public class InitializeDBTests {
 
     collectionNames = jsonDBTemplate.getCollectionNames();
     assertTrue(collectionNames.contains("instances"));
-    //instances = jsonDBTemplate.findAll(Instance.class);
-    //assertEquals(instances.size(), size+10);
-
+    instances = jsonDBTemplate.findAll(Instance.class);
+    assertEquals(instances.size(), size+10);
   }
 
   private <T> boolean appendDirectlyToJsonFile(List<T> collectionData, File collectionFile) {
