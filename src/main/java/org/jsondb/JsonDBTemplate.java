@@ -39,8 +39,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.jxpath.JXPathContext;
-import org.apache.commons.jxpath.JXPathNotFoundException;
 import org.jsondb.annotation.Document;
 import org.jsondb.crypto.CryptoUtil;
 import org.jsondb.crypto.ICipher;
@@ -48,6 +46,9 @@ import org.jsondb.io.JsonFileLockException;
 import org.jsondb.io.JsonReader;
 import org.jsondb.query.CollectionSchemaUpdate;
 import org.jsondb.query.Update;
+
+import org.apache.commons.jxpath.JXPathContext;
+import org.apache.commons.jxpath.JXPathNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -255,7 +256,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
     return collectionName;
   }
-  
+
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#addCollectionFileChangeListener(org.jsondb.CollectionFileChangeListener)
    */
@@ -322,7 +323,7 @@ public class JsonDBTemplate implements JsonDBOperations {
   public String getCollectionName(Class<?> entityClass) {
     return this.determineCollectionName(entityClass);
   }
-  
+
   @Override
   public <T> List<T> getCollection(Class<T> entityClass) {
     String collectionName = determineCollectionName(entityClass);

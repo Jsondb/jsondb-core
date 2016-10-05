@@ -99,7 +99,7 @@ public class InitializeDBTests {
     for (int i = 0; i<10; i++) {
       Instance inst = new Instance();
       int id = 11 + i;
-      inst.setId(String.format("%06d", id));
+      inst.setId(String.format("%02d", id));
       inst.setHostname("ec2-54-191-" + id);
       //Private key is encrypted form of: b87eb02f5dd7e5232d7b0fc30a5015e4
       inst.setPrivateKey("HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES");

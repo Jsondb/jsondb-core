@@ -1,2 +1,7 @@
 {"schemaVersion":"1.0"}
-{"id":"000001","hostname":"ec2-54-191-000001","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"01","hostname":"ec2-54-191-01","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"02","hostname":"ec2-54-191-02","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"03","hostname":"ec2-54-191-03","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"04","hostname":"ec2-54-191-04","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"05","hostname":"ec2-54-191-05","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"06","hostname":"ec2-54-191-06","privateKey":"HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES","publicKey":""}
