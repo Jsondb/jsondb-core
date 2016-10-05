@@ -40,6 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.jxpath.JXPathContext;
+import org.apache.commons.jxpath.JXPathNotFoundException;
 import org.jsondb.annotation.Document;
 import org.jsondb.crypto.CryptoUtil;
 import org.jsondb.crypto.ICipher;
@@ -394,22 +395,37 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#find(java.lang.String, java.lang.Class)
-   */
   @Override
   public <T> List<T> find(String jxQuery, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return null;
+    return find(jxQuery, determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
-   */
+  @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> find(String jxQuery, String collectionName) {
-    // TODO Auto-generated method stub
-    return null;
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    cmd.getCollectionLock().readLock().lock();
+    try {
+      JXPathContext context = contextsRef.get().get(collectionName);
+      try {
+        Iterator<T> resultItr = context.iterate(jxQuery);
+        List<T> newCollection = new ArrayList<T>();
+        while (resultItr.hasNext()) {
+          T document = resultItr.next();
+          Object obj = Util.deepCopy(document);
+          if(encrypted && cmd.hasSecret() && null != obj) {
+            CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+          }
+          newCollection.add((T) obj);
+        }
+        return newCollection;
+      } catch (JXPathNotFoundException e) {
+        //TODO: Log the exception this is not a error state the XPATH query returned nothing.
+        return null;
+      }
+    } finally {
+      cmd.getCollectionLock().readLock().unlock();
+    }
   }
 
   @Override
@@ -446,40 +462,65 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findById(java.lang.Object, java.lang.Class)
-   */
   @Override
   public <T> T findById(Object id, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return null;
+    return findById(id, determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findById(java.lang.Object, java.lang.String)
-   */
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T findById(Object id, String collectionName) {
-    // TODO Auto-generated method stub
-    return null;
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    if(null == collectionMeta) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+    }
+    collectionMeta.getCollectionLock().readLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+      Object obj = Util.deepCopy(collection.get(id));
+      if(encrypted && collectionMeta.hasSecret() && null != obj){
+        CryptoUtil.decryptFields(obj, collectionMeta, dbConfig.getCipher());
+      }
+      return (T) obj;
+    } finally {
+      collectionMeta.getCollectionLock().readLock().unlock();
+    }
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findOne(java.lang.String, java.lang.Class)
-   */
   @Override
   public <T> T findOne(String jxQuery, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return null;
+    return findOne(jxQuery, determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findOne(java.lang.String, java.lang.String)
-   */
+  @SuppressWarnings("unchecked")
   @Override
   public <T> T findOne(String jxQuery, String collectionName) {
-    // TODO Auto-generated method stub
-    return null;
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    if(null == collectionMeta) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
+    }
+    collectionMeta.getCollectionLock().readLock().lock();
+    try {
+      if (!collectionsRef.get().containsKey(collectionName)) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
+      }
+      JXPathContext context = contextsRef.get().get(collectionName);
+      Iterator<T> resultItr = context.iterate(jxQuery);
+      while (resultItr.hasNext()) {
+        T document = resultItr.next();
+        Object obj = Util.deepCopy(document);
+        if(encrypted && collectionMeta.hasSecret() && null!= obj){
+          CryptoUtil.decryptFields(obj, collectionMeta, dbConfig.getCipher());
+        }
+        return (T) obj; // Return the first element we find.
+      }
+      return null;
+    } finally {
+      collectionMeta.getCollectionLock().readLock().unlock();
+    }
   }
 
   /* (non-Javadoc)
