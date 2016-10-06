@@ -2,7 +2,7 @@
  * Copyright (c) 2016 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to 
+ * of this software and associated documentation files (the "Software"), to
  * deal in the Software without restriction, including without limitation the
  * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
  * sell copies of the Software, and to permit persons to whom the Software is
@@ -11,10 +11,10 @@
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL 
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
@@ -52,7 +52,7 @@ public class CollectionMetaDataTests {
   private File dbFilesFolder = new File(dbFilesLocation);
   private File instancesJson = new File(dbFilesFolder, "instances.json");
   ICipher cipher = null;
-  
+
   @Before
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
@@ -70,7 +70,7 @@ public class CollectionMetaDataTests {
   public void tearDown() throws Exception {
     Util.delete(dbFilesFolder);
   }
-  
+
   @Test
   public void test_MetadataLoad_Simple() {
     Volume router = new Volume();
@@ -91,7 +91,7 @@ public class CollectionMetaDataTests {
     assertEquals("isFlash", cmd.getGetterMethodForFieldName("flash").getName());
 
     assertFalse(cmd.hasSecret());
-    
+
     assertEquals("1.0", cmd.getSchemaVersion());
   }
 
@@ -110,7 +110,7 @@ public class CollectionMetaDataTests {
 
     assertTrue(cmd.hasSecret());
   }
-  
+
   @Test
   public void test_MetadataLoad_UsingBuilder() {
     JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "org.jsondb.testmodel", cipher, false, null);

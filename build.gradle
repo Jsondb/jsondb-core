@@ -26,10 +26,16 @@ plugins {
 }
 
 description = 'A JAVA JSON Document database.'
+group = 'org.jsondb'
 
 apply plugin: "java"
 apply plugin: "jacoco"
 apply plugin: "eclipse"
+
+ext {
+  version = getVersionName()
+  println "Build Version: $version"
+}
 
 repositories {
   mavenCentral()
@@ -88,3 +94,15 @@ cleanEclipseJdt {
   }
 }
 tasks.eclipse.dependsOn(cleanEclipse)
+
+/*
+ * Gets the version name from the latest Git tag
+ */
+def getVersionName() {
+  def stdout = new ByteArrayOutputStream()
+  exec {
+    commandLine 'git', 'describe', '--tags'
+    standardOutput = stdout
+  }
+  return stdout.toString().trim()
+}
