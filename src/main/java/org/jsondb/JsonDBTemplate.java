@@ -28,7 +28,6 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,11 +38,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.jsondb.annotation.Document;
 import org.jsondb.crypto.CryptoUtil;
 import org.jsondb.crypto.ICipher;
 import org.jsondb.io.JsonFileLockException;
 import org.jsondb.io.JsonReader;
+import org.jsondb.io.JsonWriter;
 import org.jsondb.query.CollectionSchemaUpdate;
 import org.jsondb.query.Update;
 
@@ -61,8 +60,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 public class JsonDBTemplate implements JsonDBOperations {
   private Logger logger = LoggerFactory.getLogger(JsonDBTemplate.class);
 
-  private static final Collection<String> RESTRICTED_CLASSES;
-
   private JsonDBConfig dbConfig = null;
   private final boolean encrypted;
   private File lockFilesLocation;
@@ -71,18 +68,6 @@ public class JsonDBTemplate implements JsonDBOperations {
   private AtomicReference<Map<String, File>> fileObjectsRef = new AtomicReference<Map<String, File>>(new ConcurrentHashMap<String, File>());
   private AtomicReference<Map<String, Map<Object, ?>>> collectionsRef = new AtomicReference<Map<String, Map<Object, ?>>>(new ConcurrentHashMap<String, Map<Object, ?>>());
   private AtomicReference<Map<String, JXPathContext>> contextsRef = new AtomicReference<Map<String, JXPathContext>>(new ConcurrentHashMap<String, JXPathContext>());
-
-
-  static {
-
-    Set<String> restrictedClasses = new HashSet<String>();
-    restrictedClasses.add(List.class.getName());
-    restrictedClasses.add(Collection.class.getName());
-    restrictedClasses.add(Iterator.class.getName());
-    restrictedClasses.add(HashSet.class.getName());
-
-    RESTRICTED_CLASSES = Collections.unmodifiableCollection(restrictedClasses);
-  }
 
   public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage) {
     this(dbFilesLocationString, baseScanPackage, null, false, null);
@@ -552,42 +537,108 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#insert(java.lang.Object)
-   */
   @Override
   public <T> void insert(Object objectToSave) {
-    // TODO Auto-generated method stub
-
+    if (null == objectToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object cannot be inserted into DB");
+    }
+    Util.ensureNotRestricted(objectToSave);
+    insert(objectToSave, Util.determineEntityCollectionName(objectToSave));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#insert(java.lang.Object, java.lang.String)
-   */
+  @SuppressWarnings("unchecked")
   @Override
   public <T> void insert(Object objectToSave, String collectionName) {
-    // TODO Auto-generated method stub
+    if (null == objectToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object cannot be inserted into DB");
+    }
+    Util.ensureNotRestricted(objectToSave);
+    Object objToSave = Util.deepCopy(objectToSave);
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    cmd.getCollectionLock().writeLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
+      }
+      Object id = Util.getIdForEntity(objectToSave, cmd.getIdAnnotatedFieldGetterMethod());
+      if(encrypted && cmd.hasSecret()){
+        CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
+      }
+      if (null == id) {
+        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod());
+      } else if (collection.containsKey(id)) {
+        throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
+      }
 
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+
+      boolean appendResult = jw.appendToJsonFile(collection.values(), objToSave);
+
+      if(appendResult) {
+        collection.put(Util.deepCopy(id), (T) objToSave);
+      }
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
+    }
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#insert(java.util.Collection, java.lang.Class)
-   */
   @Override
-  public <T> void insert(Collection<? extends T> batchToSave,
-      Class<T> entityClass) {
-    // TODO Auto-generated method stub
-
+  public <T> void insert(Collection<? extends T> batchToSave, Class<T> entityClass) {
+    insert(batchToSave, Util.determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#insert(java.util.Collection, java.lang.String)
-   */
+  @SuppressWarnings("unchecked")
   @Override
-  public <T> void insert(Collection<? extends T> batchToSave,
-      String collectionName) {
-    // TODO Auto-generated method stub
+  public <T> void insert(Collection<? extends T> batchToSave, String collectionName) {
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    collectionMeta.getCollectionLock().writeLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
+      }
+      CollectionMetaData cmd = cmdMap.get(collectionName);
+      Set<Object> uniqueIds = new HashSet<Object>();
+      Map<Object, T> newCollection = new LinkedHashMap<Object, T>();
+      for (T o : batchToSave) {
+        Object obj = Util.deepCopy(o);
+        Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
+        if(encrypted && cmd.hasSecret()){
+          CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
+        }
+        if (null == id) {
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod());
+        } else if (collection.containsKey(id)) {
+          throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
+        }
+        if (!uniqueIds.add(id)) {
+          throw new InvalidJsonDbApiUsageException("Duplicate object with id: " + id + " within the passed in parameter");
+        }
+        newCollection.put(Util.deepCopy(id), (T) obj);
+      }
 
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+      boolean appendResult = jw.appendToJsonFile(collection.values(), newCollection.values());
+
+      if(appendResult) {
+        collection.putAll(newCollection);
+      }
+    } finally {
+      collectionMeta.getCollectionLock().writeLock().unlock();
+    }
   }
 
   /* (non-Javadoc)

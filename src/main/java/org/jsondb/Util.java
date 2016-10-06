@@ -31,6 +31,12 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jsondb.annotation.Document;
@@ -47,6 +53,24 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class Util {
   private static Logger logger = LoggerFactory.getLogger(Util.class);
 
+  private static final Collection<String> RESTRICTED_CLASSES;
+  static {
+
+    Set<String> restrictedClasses = new HashSet<String>();
+    restrictedClasses.add(List.class.getName());
+    restrictedClasses.add(Collection.class.getName());
+    restrictedClasses.add(Iterator.class.getName());
+    restrictedClasses.add(HashSet.class.getName());
+
+    RESTRICTED_CLASSES = Collections.unmodifiableCollection(restrictedClasses);
+  }
+  
+  protected static void ensureNotRestricted(Object o) {
+    if (o.getClass().isArray() || RESTRICTED_CLASSES.contains(o.getClass().getName())) {
+      throw new InvalidJsonDbApiUsageException("Collection object cannot be inserted, removed, updated or upserted as a single object");
+    }
+  }
+  
   protected static <T> String determineEntityCollectionName(T obj) {
     return determineCollectionName(obj.getClass());
   }
