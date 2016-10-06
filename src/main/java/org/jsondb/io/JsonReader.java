@@ -96,8 +96,8 @@ public class JsonReader {
    * A utility method that reads the next line and returns it.
    * Since we use a BufferedReader this method may often read more
    * than the next line to determine if the line ended.
-   * @return
-   * @throws IOException
+   * @return the content of the line just read
+   * @throws IOException if an I/O error occurs
    */
   public String readLine() throws IOException {
     return reader.readLine();

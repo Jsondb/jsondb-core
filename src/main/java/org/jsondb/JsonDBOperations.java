@@ -124,7 +124,7 @@ public interface JsonDBOperations {
    * The returned collection will be a new copy of the existing collection
    * Modifying its contents will not modify the contents of collection in JsonDB memory.
    *
-   * @param collectionName name of the collection
+   * @param entityClass class that determines the name of the collection
    * @return A copy of the existing collection or a newly created one.
    */
   <T> List<T> getCollection(Class<T> entityClass);
@@ -253,8 +253,8 @@ public interface JsonDBOperations {
    * and if it is set to false it will replace existing collections with collections being
    * restored
    *
-   * @param restorePath
-   * @merge merge
+   * @param restorePath path were backup jsondb files are present
+   * @param merge whether to merge data from restore location
    */
   void restore(String restorePath, boolean merge);
 }

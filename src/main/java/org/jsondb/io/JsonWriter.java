@@ -311,7 +311,7 @@ public class JsonWriter {
    * file in a atomic way
    *
    * @param collection existing collection
-   * @param removeIds ids of objects to be removed.
+   * @param id id of objects to be removed.
    * @return true if success
    */
   public <T> boolean removeFromJsonFile(Map<Object, T> collection, Object id) {

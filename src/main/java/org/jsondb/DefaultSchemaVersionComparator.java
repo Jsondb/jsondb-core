@@ -33,12 +33,13 @@ public class DefaultSchemaVersionComparator implements Comparator<String> {
 
   /**
    * compare the expected version with the actual version.
+   * 
+   * Checkout: http://stackoverflow.com/questions/6701948/efficient-way-to-compare-version-strings-in-java
+   * 
    * @param expected the version that is obtained from @Document annotation
-   *
-   * @see http://stackoverflow.com/questions/6701948/efficient-way-to-compare-version-strings-in-java
-   *
    * @param actual the version that is read from the .json file
-   * @return a negative integer, zero, or a positive integer as the first argument is less than, equal to, or greater than the second.
+   * @return a negative integer, zero, or a positive integer as the first argument is less
+   *         than, equal to, or greater than the second.
    */
   @Override
   public int compare(String expected, String actual) {

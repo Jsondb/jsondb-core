@@ -128,8 +128,9 @@ public class DefaultAESCipher implements ICipher {
   }
 
   /**
-   *
-   * @param Base64 encrypted AES encrypted cipherText
+   * A method to decrypt the provided cipher text.
+   * 
+   * @param cipherText encrypted AES encrypted cipherText
    * @return decrypted text
    */
   @Override
