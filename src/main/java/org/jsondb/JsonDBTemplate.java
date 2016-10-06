@@ -238,31 +238,11 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
-  private <T> String determineEntityCollectionName(T obj) {
-    return determineCollectionName(obj.getClass());
-  }
-
-  private String determineCollectionName(Class<?> entityClass) {
-    if (entityClass == null) {
-        throw new InvalidJsonDbApiUsageException(
-              "No class parameter provided, entity collection can't be determined");
-    }
-    Document doc = entityClass.getAnnotation(Document.class);
-    if (null == doc) {
-      throw new InvalidJsonDbApiUsageException(
-          "Entity '" + entityClass.getSimpleName() + "' is not annotated with annotation @Document");
-    }
-    String collectionName = doc.collection();
-
-    return collectionName;
-  }
-
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#addCollectionFileChangeListener(org.jsondb.CollectionFileChangeListener)
    */
   @Override
-  public void addCollectionFileChangeListener(
-      CollectionFileChangeListener listener) {
+  public void addCollectionFileChangeListener(CollectionFileChangeListener listener) {
     // TODO Auto-generated method stub
 
   }
@@ -278,7 +258,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> void createCollection(Class<T> entityClass) {
-    createCollection(determineCollectionName(entityClass));
+    createCollection(Util.determineCollectionName(entityClass));
   }
 
   @Override
@@ -328,7 +308,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> void dropCollection(Class<T> entityClass) {
-    dropCollection(determineCollectionName(entityClass));
+    dropCollection(Util.determineCollectionName(entityClass));
   }
 
   @Override
@@ -386,12 +366,13 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public String getCollectionName(Class<?> entityClass) {
-    return this.determineCollectionName(entityClass);
+    return Util.determineCollectionName(entityClass);
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> getCollection(Class<T> entityClass) {
-    String collectionName = determineCollectionName(entityClass);
+    String collectionName = Util.determineCollectionName(entityClass);
     Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
     if (null == collection) {
       createCollection(collectionName);
@@ -412,7 +393,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> boolean collectionExists(Class<T> entityClass) {
-    return collectionExists(determineCollectionName(entityClass));
+    return collectionExists(Util.determineCollectionName(entityClass));
   }
 
   @Override
@@ -434,7 +415,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> boolean isCollectionReadonly(Class<T> entityClass) {
-    return isCollectionReadonly(determineCollectionName(entityClass));
+    return isCollectionReadonly(Util.determineCollectionName(entityClass));
   }
 
   @Override
@@ -445,7 +426,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> List<T> find(String jxQuery, Class<T> entityClass) {
-    return find(jxQuery, determineCollectionName(entityClass));
+    return find(jxQuery, Util.determineCollectionName(entityClass));
   }
 
   @SuppressWarnings("unchecked")
@@ -478,7 +459,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> List<T> findAll(Class<T> entityClass) {
-    return findAll(determineCollectionName(entityClass));
+    return findAll(Util.determineCollectionName(entityClass));
   }
 
   @SuppressWarnings("unchecked")
@@ -512,7 +493,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> T findById(Object id, Class<T> entityClass) {
-    return findById(id, determineCollectionName(entityClass));
+    return findById(id, Util.determineCollectionName(entityClass));
   }
 
   @SuppressWarnings("unchecked")
@@ -540,7 +521,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   @Override
   public <T> T findOne(String jxQuery, Class<T> entityClass) {
-    return findOne(jxQuery, determineCollectionName(entityClass));
+    return findOne(jxQuery, Util.determineCollectionName(entityClass));
   }
 
   @SuppressWarnings("unchecked")

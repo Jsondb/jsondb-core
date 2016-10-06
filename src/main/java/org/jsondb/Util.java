@@ -33,6 +33,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
+import org.jsondb.annotation.Document;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +47,32 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class Util {
   private static Logger logger = LoggerFactory.getLogger(Util.class);
 
+  protected static <T> String determineEntityCollectionName(T obj) {
+    return determineCollectionName(obj.getClass());
+  }
+
+  /**
+   * A utility method to determine the collection name for a given entity class.
+   * This method attempts to find a the annotation <code>Document</code> on this class.
+   * If found then we know the collection name else it throws a exception
+   * @param entityClass
+   * @return
+   */
+  protected static String determineCollectionName(Class<?> entityClass) {
+    if (entityClass == null) {
+        throw new InvalidJsonDbApiUsageException(
+              "No class parameter provided, entity collection can't be determined");
+    }
+    Document doc = entityClass.getAnnotation(Document.class);
+    if (null == doc) {
+      throw new InvalidJsonDbApiUsageException(
+          "Entity '" + entityClass.getSimpleName() + "' is not annotated with annotation @Document");
+    }
+    String collectionName = doc.collection();
+
+    return collectionName;
+  }
+  
   /**
    * A utility method to extract the value of field marked by the @Id annotation using its
    * getter/accessor method.
