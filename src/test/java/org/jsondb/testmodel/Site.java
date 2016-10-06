@@ -22,44 +22,27 @@ package org.jsondb.testmodel;
 
 import org.jsondb.annotation.Document;
 import org.jsondb.annotation.Id;
-import org.jsondb.annotation.Secret;
 
 /**
- * A test Pojo representing a AWS Instance.
- * @version 1.0 28-Sep-2016
+ * A test Pojo representing a AWS Site.
+ * Used to test JsonDB - createCollection() and dropCollection() operations
+ * @version 1.0 06-Oct-2016
  */
-@Document(collection = "instances", schemaVersion= "1.0")
-public class Instance {
+@Document(collection = "sites", schemaVersion= "1.0")
+public class Site {
   @Id
   private String id;
-  private String hostname;
-
-  @Secret
-  private String privateKey;
-  private String publicKey;
-
+  private String location;
   public String getId() {
     return id;
   }
   public void setId(String id) {
     this.id = id;
   }
-  public String getHostname() {
-    return hostname;
+  public String getLocation() {
+    return location;
   }
-  public void setHostname(String hostname) {
-    this.hostname = hostname;
-  }
-  public String getPrivateKey() {
-    return privateKey;
-  }
-  public void setPrivateKey(String privateKey) {
-    this.privateKey = privateKey;
-  }
-  public String getPublicKey() {
-    return publicKey;
-  }
-  public void setPublicKey(String publicKey) {
-    this.publicKey = publicKey;
+  public void setLocation(String location) {
+    this.location = location;
   }
 }
