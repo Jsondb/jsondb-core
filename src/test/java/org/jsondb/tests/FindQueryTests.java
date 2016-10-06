@@ -18,7 +18,7 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package org.jsondb;
+package org.jsondb.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -29,6 +29,9 @@ import java.io.File;
 import java.security.GeneralSecurityException;
 import java.util.List;
 
+import org.jsondb.InvalidJsonDbApiUsageException;
+import org.jsondb.JsonDBTemplate;
+import org.jsondb.Util;
 import org.jsondb.crypto.DefaultAESCipher;
 import org.jsondb.crypto.ICipher;
 import org.jsondb.testmodel.Instance;
