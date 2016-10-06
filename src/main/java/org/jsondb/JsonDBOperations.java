@@ -79,6 +79,20 @@ public interface JsonDBOperations {
    */
   <T> void createCollection(String collectionName);
 
+  /**
+   * Drop the collection with the name indicated by the entity class.
+   *
+   * @param entityClass class that determines the collection to drop/delete.
+   */
+  <T> void dropCollection(Class<T> entityClass);
+
+  /**
+   * Drop the collection with the given name.
+   *
+   * @param collectionName name of the collection to drop/delete.
+   */
+  void dropCollection(String collectionName);
+
   <T> void updateCollectionSchema(CollectionSchemaUpdate update, Class<T> entityClass);
 
   /**
@@ -104,7 +118,7 @@ public interface JsonDBOperations {
    * @return
    */
   String getCollectionName(Class<?> entityClass);
-  
+
   /**
    * Get a collection by name, creating it if it doesn't exist.
    * The returned collection will be a new copy of the existing collection
@@ -140,20 +154,6 @@ public interface JsonDBOperations {
   <T> boolean isCollectionReadonly(Class<T> entityClass);
 
   <T> boolean isCollectionReadonly(String collectionName);
-
-  /**
-   * Drop the collection with the name indicated by the entity class.
-   *
-   * @param entityClass class that determines the collection to drop/delete.
-   */
-  <T> void dropCollection(Class<T> entityClass);
-
-  /**
-   * Drop the collection with the given name.
-   *
-   * @param collectionName name of the collection to drop/delete.
-   */
-  void dropCollection(String collectionName);
 
   /**
    * Map the results of an ad-hoc query on the collection for the entity class to a List of the specified type.

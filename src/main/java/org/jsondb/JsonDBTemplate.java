@@ -276,22 +276,87 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#createCollection(java.lang.Class)
-   */
   @Override
   public <T> void createCollection(Class<T> entityClass) {
-    // TODO Auto-generated method stub
-
+    createCollection(determineCollectionName(entityClass));
   }
 
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#createCollection(java.lang.String)
-   */
   @Override
   public <T> void createCollection(String collectionName) {
-    // TODO Auto-generated method stub
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if (null == cmd) {
+      throw new InvalidJsonDbApiUsageException(
+          "No class found with @Document Annotation and attribute collectionName as: " + collectionName);
+    }
+    @SuppressWarnings("unchecked")
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if (null != collection) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' already exists.");
+    }
 
+    cmd.getCollectionLock().writeLock().lock();
+
+    // Some other thread might have created same collection when this thread reached this point
+    if(collectionsRef.get().get(collectionName) != null) {
+      return;
+    }
+
+    try {
+      String collectionFileName = collectionName + ".json";
+      File fileObject = new File(dbConfig.getDbFilesLocation(), collectionFileName);
+      try {
+        fileObject.createNewFile();
+      } catch (IOException e) {
+        logger.error("IO Exception creating the collection file {}", collectionFileName, e);
+        throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName);
+      }
+
+      if (Util.stampVersion(dbConfig, fileObject, cmd.getSchemaVersion())) {
+        collection = new LinkedHashMap<Object, T>();
+        collectionsRef.get().put(collectionName, collection);
+        contextsRef.get().put(collectionName, JXPathContext.newContext(collection.values())) ;
+        fileObjectsRef.get().put(collectionName, fileObject);
+        cmd.setActualSchemaVersion(cmd.getSchemaVersion());
+      } else {
+        fileObject.delete();
+        throw new JsonDBException("Failed to stamp version for collection: " + collectionName);
+      }
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
+    }
+  }
+
+  @Override
+  public <T> void dropCollection(Class<T> entityClass) {
+    dropCollection(determineCollectionName(entityClass));
+  }
+
+  @Override
+  public void dropCollection(String collectionName) {
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    if(null == collectionMeta) {
+      throw new InvalidJsonDbApiUsageException("Failed to find collection with name '" + collectionName + "'");
+    }
+    collectionMeta.getCollectionLock().writeLock().lock();
+    try {
+      if (!collectionsRef.get().containsKey(collectionName)) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found.");
+      }
+      File toDelete = fileObjectsRef.get().get(collectionName);
+      try {
+        Files.deleteIfExists(toDelete.toPath());
+      } catch (IOException e) {
+        logger.error("IO Exception deleting the collection file {}", toDelete.getName(), e);
+        throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName);
+      }
+      //cmdMap.remove(collectionName); //Do not remove it from the CollectionMetaData Map.
+      //Someone might want to re insert a new collection of this type.
+      fileObjectsRef.get().remove(collectionName);
+      collectionsRef.get().remove(collectionName);
+      contextsRef.get().remove(collectionName);
+    } finally {
+      collectionMeta.getCollectionLock().writeLock().unlock();
+    }
   }
 
   /* (non-Javadoc)
@@ -376,24 +441,6 @@ public class JsonDBTemplate implements JsonDBOperations {
   public <T> boolean isCollectionReadonly(String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     return cmd.isReadOnly();
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#dropCollection(java.lang.Class)
-   */
-  @Override
-  public <T> void dropCollection(Class<T> entityClass) {
-    // TODO Auto-generated method stub
-
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#dropCollection(java.lang.String)
-   */
-  @Override
-  public void dropCollection(String collectionName) {
-    // TODO Auto-generated method stub
-
   }
 
   @Override
