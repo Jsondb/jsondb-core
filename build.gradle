@@ -31,6 +31,7 @@ group = 'org.jsondb'
 apply plugin: "java"
 apply plugin: "jacoco"
 apply plugin: "eclipse"
+apply plugin: "signing"
 
 ext {
   version = getVersionName()
@@ -94,6 +95,25 @@ cleanEclipseJdt {
   }
 }
 tasks.eclipse.dependsOn(cleanEclipse)
+
+task javadocJar(type: Jar) {
+  classifier = 'javadoc'
+  from javadoc
+}
+
+task sourcesJar(type: Jar) {
+  classifier = 'sources'
+  from sourceSets.main.allSource
+}
+
+artifacts {
+  archives javadocJar, sourcesJar
+}
+
+signing {
+  required { gradle.taskGraph.hasTask("uploadArchives") }
+  sign configurations.archives
+}
 
 /*
  * Gets the version name from the latest Git tag
