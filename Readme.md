@@ -8,4 +8,4 @@ Provides APIs that are very similar and inspired by MongoDB.
 
 Provides a Apache JxPath based query system.
 
-# Note: Still under development not ready for use
+# Note: Still under development about 20% completed, not ready for use
