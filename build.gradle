@@ -104,5 +104,6 @@ def getVersionName() {
     commandLine 'git', 'describe', '--tags'
     standardOutput = stdout
   }
-  return stdout.toString().trim()
+  def versionString = stdout.toString().replaceFirst("-", ".");
+  return versionString.substring(0, versionString.indexOf("-"));
 }
