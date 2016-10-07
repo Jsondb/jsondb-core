@@ -26,7 +26,7 @@ plugins {
 }
 
 description = 'A JAVA JSON Document database.'
-group = 'org.jsondb'
+group = 'io.jsondb'
 
 apply plugin: "java"
 apply plugin: "jacoco"
