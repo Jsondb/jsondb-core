@@ -57,9 +57,9 @@ public class DefaultAESCipher implements ICipher {
   /**
    * Constructor that assumes data to be of type 'UTF-8'
    *
-   * @param encryptionKey EncryptionKeySpec
-   * @throws UnsupportedEncodingException
-   * @throws GeneralSecurityException
+   * @param encryptionKey  symmetric key to be used during encryption or decryption
+   * @throws UnsupportedEncodingException  Unsupported Encoding of the Symmetric Encryption Key string
+   * @throws GeneralSecurityException  a general security exception
    */
   public DefaultAESCipher(String encryptionKey) throws UnsupportedEncodingException, GeneralSecurityException {
     this(encryptionKey, "UTF-8");
@@ -100,8 +100,8 @@ public class DefaultAESCipher implements ICipher {
 
   /**
    * This method is used to encrypt(Symmetric) plainText coming in input using AES algorithm
-   * @param plainText
-   * @return Base64 encrypted AES encrypted cipher
+   * @param plainText the plain text string to be encrypted
+   * @return Base64 encoded AES encrypted cipher text
    */
   @Override
   public String encrypt(String plainText) {
@@ -130,7 +130,7 @@ public class DefaultAESCipher implements ICipher {
   /**
    * A method to decrypt the provided cipher text.
    * 
-   * @param cipherText encrypted AES encrypted cipherText
+   * @param cipherText AES encrypted cipherText
    * @return decrypted text
    */
   @Override

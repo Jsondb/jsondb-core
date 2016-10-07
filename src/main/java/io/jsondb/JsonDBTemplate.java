@@ -116,6 +116,9 @@ public class JsonDBTemplate implements JsonDBOperations {
     });
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#reLoadDB()
+   */
   @Override
   public void reLoadDB() {
     loadDB();
@@ -130,6 +133,9 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#reloadCollection(java.lang.String)
+   */
   public void reloadCollection(String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     cmd.getCollectionLock().writeLock().lock();
@@ -241,11 +247,17 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#createCollection(java.lang.Class)
+   */
   @Override
   public <T> void createCollection(Class<T> entityClass) {
     createCollection(Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#createCollection(java.lang.String)
+   */
   @Override
   public <T> void createCollection(String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
@@ -291,11 +303,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#dropCollection(java.lang.Class)
+   */
   @Override
   public <T> void dropCollection(Class<T> entityClass) {
     dropCollection(Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#dropCollection(java.lang.String)
+   */
   @Override
   public void dropCollection(String collectionName) {
     CollectionMetaData collectionMeta = cmdMap.get(collectionName);
@@ -344,16 +362,25 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#getCollectionNames()
+   */
   @Override
   public Set<String> getCollectionNames() {
     return collectionsRef.get().keySet();
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#getCollectionName(java.lang.Class)
+   */
   @Override
   public String getCollectionName(Class<?> entityClass) {
     return Util.determineCollectionName(entityClass);
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#getCollection(java.lang.Class)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> getCollection(Class<T> entityClass) {
@@ -376,11 +403,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     return newCollection;
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#collectionExists(java.lang.Class)
+   */
   @Override
   public <T> boolean collectionExists(Class<T> entityClass) {
     return collectionExists(Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#collectionExists(java.lang.String)
+   */
   @Override
   public boolean collectionExists(String collectionName) {
     CollectionMetaData collectionMeta = cmdMap.get(collectionName);
@@ -395,25 +428,34 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
-  /**
-   * A collection can be readonly if its schema version does not match the actualSchema version
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#isCollectionReadonly(java.lang.Class)
    */
   @Override
   public <T> boolean isCollectionReadonly(Class<T> entityClass) {
     return isCollectionReadonly(Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#isCollectionReadonly(java.lang.String)
+   */
   @Override
   public <T> boolean isCollectionReadonly(String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     return cmd.isReadOnly();
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.Class)
+   */
   @Override
   public <T> List<T> find(String jxQuery, Class<T> entityClass) {
     return find(jxQuery, Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> find(String jxQuery, String collectionName) {
@@ -442,11 +484,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findAll(java.lang.Class)
+   */
   @Override
   public <T> List<T> findAll(Class<T> entityClass) {
     return findAll(Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findAll(java.lang.String)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> findAll(String collectionName) {
@@ -476,11 +524,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findById(java.lang.Object, java.lang.Class)
+   */
   @Override
   public <T> T findById(Object id, Class<T> entityClass) {
     return findById(id, Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findById(java.lang.Object, java.lang.String)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> T findById(Object id, String collectionName) {
@@ -504,11 +558,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findOne(java.lang.String, java.lang.Class)
+   */
   @Override
   public <T> T findOne(String jxQuery, Class<T> entityClass) {
     return findOne(jxQuery, Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findOne(java.lang.String, java.lang.String)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> T findOne(String jxQuery, String collectionName) {
@@ -537,6 +597,9 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#insert(java.lang.Object)
+   */
   @Override
   public <T> void insert(Object objectToSave) {
     if (null == objectToSave) {
@@ -546,6 +609,9 @@ public class JsonDBTemplate implements JsonDBOperations {
     insert(objectToSave, Util.determineEntityCollectionName(objectToSave));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#insert(java.lang.Object, java.lang.String)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> void insert(Object objectToSave, String collectionName) {
@@ -589,11 +655,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#insert(java.util.Collection, java.lang.Class)
+   */
   @Override
   public <T> void insert(Collection<? extends T> batchToSave, Class<T> entityClass) {
     insert(batchToSave, Util.determineCollectionName(entityClass));
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#insert(java.util.Collection, java.lang.String)
+   */
   @SuppressWarnings("unchecked")
   @Override
   public <T> void insert(Collection<? extends T> batchToSave, String collectionName) {
@@ -641,6 +713,24 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#save(java.lang.Object, java.lang.Class)
+   */
+  @Override
+  public <T> void save(Object objectToSave, Class<T> entityClass) {
+    // TODO Auto-generated method stub
+
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#save(java.lang.Object, java.lang.String)
+   */
+  @Override
+  public <T> void save(Object objectToSave, String collectionName) {
+    // TODO Auto-generated method stub
+
+  }
+  
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#findAndRemove(java.lang.String, java.lang.Class)
    */
@@ -716,24 +806,6 @@ public class JsonDBTemplate implements JsonDBOperations {
       String collectionName) {
     // TODO Auto-generated method stub
     return 0;
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#save(java.lang.Object, java.lang.Class)
-   */
-  @Override
-  public <T> void save(Object objectToSave, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#save(java.lang.Object, java.lang.String)
-   */
-  @Override
-  public <T> void save(Object objectToSave, String collectionName) {
-    // TODO Auto-generated method stub
-
   }
 
   /* (non-Javadoc)

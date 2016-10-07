@@ -77,10 +77,10 @@ public class Util {
 
   /**
    * A utility method to determine the collection name for a given entity class.
-   * This method attempts to find a the annotation <code>Document</code> on this class.
+   * This method attempts to find a the annotation {@link io.jsondb.annotation.Document} on this class.
    * If found then we know the collection name else it throws a exception
-   * @param entityClass
-   * @return
+   * @param entityClass  class that determines the name of the collection
+   * @return  name of the class 
    */
   protected static String determineCollectionName(Class<?> entityClass) {
     if (entityClass == null) {
@@ -185,7 +185,10 @@ public class Util {
    * Utility to stamp the version into a newly created .json File
    * This method is expected to be invoked on a newly created .json file before it is usable.
    * So no locking code required.
-   *
+   * 
+   * @param dbConfig  all the settings used by Json DB
+   * @param f  the target .json file on which to stamp the version
+   * @param version  the actual version string to stamp
    * @return true if success.
    */
   public static boolean stampVersion(JsonDBConfig dbConfig, File f, String version) {
@@ -229,7 +232,7 @@ public class Util {
 
   /**
    * Utility to delete directory recursively
-   * @param f
+   * @param f  File object representing the directory to recursively delete
    */
   public static void delete(File f) {
     if (f.isDirectory()) {

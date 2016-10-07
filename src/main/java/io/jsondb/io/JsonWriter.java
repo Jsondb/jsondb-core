@@ -137,6 +137,8 @@ public class JsonWriter {
    *
    * @param collection existing collection
    * @param objectToSave new Object that is being inserted or updated.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean appendToJsonFile(Collection<T> collection, Object objectToSave) {
@@ -224,6 +226,8 @@ public class JsonWriter {
    *
    * @param collection existing collection
    * @param batchToSave collection of objects to append.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean appendToJsonFile(Collection<T> collection, Collection<? extends T> batchToSave) {
@@ -313,6 +317,8 @@ public class JsonWriter {
    *
    * @param collection existing collection
    * @param id id of objects to be removed.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean removeFromJsonFile(Map<Object, T> collection, Object id) {
@@ -399,6 +405,8 @@ public class JsonWriter {
    *
    * @param collection existing collection
    * @param removeIds ids of objects to be removed.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean removeFromJsonFile(Map<Object, T> collection, Set<Object> removeIds) {
@@ -486,6 +494,8 @@ public class JsonWriter {
    * @param collection existing collection
    * @param id the id of object to save
    * @param objectToSave the actual object to save.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean updateInJsonFile(Map<Object, T> collection, Object id, T objectToSave) {
@@ -577,6 +587,8 @@ public class JsonWriter {
    *
    * @param collection existing collection
    * @param modifiedObjects objects to update.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean updateInJsonFile(Map<Object, T> collection, Map<Object, T> modifiedObjects) {
@@ -668,6 +680,8 @@ public class JsonWriter {
    *
    * @param collection existing collection
    * @param ignoreReadonly force rewrite even if the collection is marked readonly this is necessary for schemaupdate.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if success
    */
   public <T> boolean reWriteJsonFile(Collection<T> collection, boolean ignoreReadonly) {

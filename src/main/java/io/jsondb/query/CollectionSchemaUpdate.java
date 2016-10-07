@@ -43,7 +43,7 @@ public class CollectionSchemaUpdate {
    *
    * @param key: JSON attribute to update
    * @param operation: operation to carry out on the attribute
-   * @return
+   * @return  the updated CollectionSchemaUpdate
    */
   public static CollectionSchemaUpdate update(String key, IOperation operation) {
     return new CollectionSchemaUpdate().set(key, operation);
@@ -56,8 +56,8 @@ public class CollectionSchemaUpdate {
    * Attempt to add a DELETE operation for akey which does not exist will have no effect.
    *
    * @param key (a.k.a JSON Field name) for which operation is being added
-   * @param operation
-   * @return
+   * @param operation  operation to perform
+   * @return  the updated CollectionSchemaUpdate
    */
   public CollectionSchemaUpdate set(String key, IOperation operation) {
     collectionUpdateData.put(key, operation);
@@ -70,6 +70,8 @@ public class CollectionSchemaUpdate {
 
   /**
    * Returns a Map of ADD operations which have a non-null default value specified.
+   * 
+   * @return Map of ADD operations which have a non-null  default value specified
    */
   public Map<String, AddOperation> getAddOperations() {
     Map<String, AddOperation> addOperations = new TreeMap<String, AddOperation>();
@@ -88,6 +90,8 @@ public class CollectionSchemaUpdate {
 
   /**
    * Returns a Map of RENAME operations.
+   * 
+   * @return Map of RENAME operations which have a non-null  default value specified
    */
   public Map<String, RenameOperation> getRenameOperations() {
     Map<String, RenameOperation> renOperations = new TreeMap<String, RenameOperation>();
@@ -103,6 +107,8 @@ public class CollectionSchemaUpdate {
 
   /**
    * Returns a Map of DELETE operations.
+   * 
+   * @return Map of DELETE operations which have a non-null  default value specified
    */
   public Map<String, DeleteOperation> getDeleteOperations() {
     Map<String, DeleteOperation> delOperations = new TreeMap<String, DeleteOperation>();

@@ -38,8 +38,9 @@ public class Update {
   /**
    * Static factory method to create an Update using the provided key
    *
-   * @param key
-   * @return
+   * @param key the field name for the update operation
+   * @param value  the value to set for the field
+   * @return  Updated object
    */
   public static Update update(String key, Object value) {
     return new Update().set(key, value);

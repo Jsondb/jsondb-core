@@ -44,7 +44,7 @@ public interface JsonDBOperations {
 
   /**
    * Reloads a particular collection from dblocation directory
-   * @param collectionName
+   * @param collectionName name of the collection to reload
    */
   void reloadCollection(String collectionName);
 
@@ -69,6 +69,8 @@ public interface JsonDBOperations {
    * Create an uncapped collection with a name based on the provided entity class.
    *
    * @param entityClass class that determines the collection to create
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    */
   <T> void createCollection(Class<T> entityClass);
 
@@ -76,6 +78,8 @@ public interface JsonDBOperations {
    * Create an uncapped collection with the provided name.
    *
    * @param collectionName name of the collection
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    */
   <T> void createCollection(String collectionName);
 
@@ -83,6 +87,8 @@ public interface JsonDBOperations {
    * Drop the collection with the name indicated by the entity class.
    *
    * @param entityClass class that determines the collection to drop/delete.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    */
   <T> void dropCollection(Class<T> entityClass);
 
@@ -100,7 +106,9 @@ public interface JsonDBOperations {
    * This method is only available by collectionName and not by Class.
    *
    * @param update how to update the Collection
-   * @param collectionName
+   * @param collectionName  name of the collection to update schema for
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    */
   <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName);
 
@@ -115,7 +123,7 @@ public interface JsonDBOperations {
    * The collection name used for the specified class by this template.
    *
    * @param entityClass must not be {@literal null}.
-   * @return
+   * @return name of the collection
    */
   String getCollectionName(Class<?> entityClass);
 
@@ -125,6 +133,8 @@ public interface JsonDBOperations {
    * Modifying its contents will not modify the contents of collection in JsonDB memory.
    *
    * @param entityClass class that determines the name of the collection
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return A copy of the existing collection or a newly created one.
    */
   <T> List<T> getCollection(Class<T> entityClass);
@@ -133,6 +143,8 @@ public interface JsonDBOperations {
    * Check to see if a collection with a name indicated by the entity class exists.
    *
    * @param entityClass class that determines the name of the collection
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if a collection with the given name is found, false otherwise.
    */
   <T> boolean collectionExists(Class<T> entityClass);
@@ -146,9 +158,12 @@ public interface JsonDBOperations {
   boolean collectionExists(String collectionName);
 
   /**
-   * is a collection readonly
+   * is a collection readonly, 
+   * A collection can be readonly if its schema version does not match the actualSchema version
    *
    * @param entityClass class that determines the collection
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return true if collection is readonly
    */
   <T> boolean isCollectionReadonly(Class<T> entityClass);
@@ -160,6 +175,8 @@ public interface JsonDBOperations {
    *
    * @param jxQuery a XPATH query expression
    * @param entityClass the parameterized type of the returned list.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return the list of found objects
    */
   <T> List<T> find(String jxQuery, Class<T> entityClass);
@@ -169,6 +186,8 @@ public interface JsonDBOperations {
    *
    * @param jxQuery a XPATH query expression
    * @param collectionName name of the collection to retrieve the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return the list of found objects
    */
   <T> List<T> find(String jxQuery, String collectionName);
@@ -177,6 +196,8 @@ public interface JsonDBOperations {
    * Query for a list of objects of type T from the specified collection.
    *
    * @param entityClass the parameterized type of the returned list.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return the found collection
    */
   <T> List<T> findAll(Class<T> entityClass);
@@ -185,6 +206,8 @@ public interface JsonDBOperations {
    * Query for a list of objects of type T from the specified collection.
    *
    * @param collectionName name of the collection to retrieve the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return the found collection
    */
   <T> List<T> findAll(String collectionName);
@@ -193,9 +216,10 @@ public interface JsonDBOperations {
    * Returns a document with the given id mapped onto the given class. The collection the query is ran against will be
    * derived from the given target class as well.
    *
-   * @param <T>
    * @param id the id of the document to return.
    * @param entityClass the type the document shall be converted into.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    * @return the document with the given id mapped onto the given target class.
    */
   <T> T findById(Object id, Class<T> entityClass);
@@ -205,8 +229,9 @@ public interface JsonDBOperations {
    *
    * @param id the id of the document to return
    * @param collectionName the collection to query for the document
-   * @param <T>
-   * @return
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return object searched within the collection
    */
   <T> T findById(Object id, String collectionName);
 
@@ -214,11 +239,25 @@ public interface JsonDBOperations {
   <T> T findOne(String jxQuery, String collectionName);
 
   <T> void insert(Object objectToSave);
+  
+  /**
+   * Insert the object into the specified collection.
+   * 
+   * Insert is used to initially store the object into the database. To update an existing object use the save method.
+   *
+   * @param objectToSave the object to store in the collection
+   * @param collectionName name of the collection to store the object in
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   */
   <T> void insert(Object objectToSave, String collectionName);
 
   <T> void insert(Collection<? extends T> batchToSave, Class<T> entityClass);
   <T> void insert(Collection<? extends T> batchToSave, String collectionName);
 
+  <T> void save(Object objectToSave, Class<T> entityClass);
+  <T> void save(Object objectToSave, String collectionName);
+  
   <T> int findAndRemove(String jxQuery, Class<T> entityClass);
   <T> int findAndRemove(String jxQuery, Class<T> entityClass, String collectionName);
 
@@ -231,8 +270,7 @@ public interface JsonDBOperations {
   <T> int findAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> int findAndModify(String jxQuery, Update update, String collectionName);
 
-  <T> void save(Object objectToSave, Class<T> entityClass);
-  <T> void save(Object objectToSave, String collectionName);
+  
 
   <T> void upsert(Object objectToSave);
   <T> void upsert(Object objectToSave, String collectionName);
@@ -243,7 +281,7 @@ public interface JsonDBOperations {
   /**
    * This method backs up JSONDB collections to specified backup path
    *
-   * @param backupPath
+   * @param backupPath location at which to backup the database contents
    */
   void backup(String backupPath);
 
