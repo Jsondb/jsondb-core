@@ -18,23 +18,23 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 plugins {
     //id 'net.saliman.cobertura' version '2.3.1'
     id 'jacoco'
     id 'com.github.kt3k.coveralls' version '2.6.3'
 }
 
-description = 'A JAVA JSON Document database.'
-group = 'io.jsondb'
-
 apply plugin: "java"
 apply plugin: "jacoco"
 apply plugin: "eclipse"
 apply plugin: "signing"
+apply plugin: "maven"
+
+description = 'A pure java JSON based database.'
+group = 'io.jsondb'
+version = getVersionName()
 
 ext {
-  version = getVersionName()
   println "Build Version: $version"
 }
 
@@ -113,6 +113,51 @@ artifacts {
 signing {
   required { gradle.taskGraph.hasTask("uploadArchives") }
   sign configurations.archives
+}
+
+uploadArchives {
+  repositories {
+    mavenDeployer {
+      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+        authentication(userName: OSSRH_USERNAME, password: OSSRH_PASSWORD)
+      }
+
+      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+        authentication(userName: OSSRH_USERNAME, password: OSSRH_PASSWORD)
+      }
+
+      pom.project {
+        name 'jsondb-core'
+        packaging 'jar'
+        // optionally artifactId can be defined here 
+        description 'A pure java JSON based database.'
+        url 'http://www.jsondb.io'
+
+        scm {
+          connection 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+          developerConnection 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+          url 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+        }
+
+        licenses {
+          license {
+            name 'MIT License'
+            url 'https://opensource.org/licenses/MIT'
+          }
+        }
+
+        developers {
+          developer {
+            id 'FarooqKhan'
+            name 'Farooq Khan'
+            email 'FarooqKhan@users.noreply.github.com'
+          }
+        }
+      }
+    }
+  }
 }
 
 /*
