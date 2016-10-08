@@ -30,6 +30,7 @@ import java.nio.charset.Charset;
 import org.junit.Test;
 
 import io.jsondb.JsonDBConfig;
+import io.jsondb.crypto.ICipher;
 
 /**
  * @version 1.0 08-Oct-2016
@@ -39,7 +40,7 @@ public class JsonDBConfigTests {
   private String dbFilesLocation = "src/test/resources/dbfiles/dbConfigTests";
 
   @Test
-  public void testCreateConfig() {
+  public void testDbConfig() {
     JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.testmodel", null, false, null);
 
     assertEquals("src/test/resources/dbfiles/dbConfigTests", dbConfig.getDbFilesLocationString());
@@ -48,5 +49,41 @@ public class JsonDBConfigTests {
     assertEquals(Charset.forName("UTF-8"), dbConfig.getCharset());
     assertNull(dbConfig.getCipher());
     assertFalse(dbConfig.isCompatibilityMode());
+    
+    dbConfig.setDbFilesLocationString("myfolder");
+    assertEquals("myfolder", dbConfig.getDbFilesLocationString());
+    assertEquals(new File("myfolder"), dbConfig.getDbFilesLocation());
+    assertEquals(new File("myfolder").toPath(), dbConfig.getDbFilesPath());
+    
+    Charset newCharset = Charset.forName("UTF-16");
+    dbConfig.setCharset(newCharset);
+    assertEquals(newCharset, dbConfig.getCharset());
+    
+    ICipher mCipher = new MyCipher();
+    dbConfig.setCipher(mCipher);
+    assertEquals(mCipher, dbConfig.getCipher());
+    
+  }
+  
+  private class MyCipher implements ICipher {
+
+    /* (non-Javadoc)
+     * @see io.jsondb.crypto.ICipher#encrypt(java.lang.String)
+     */
+    @Override
+    public String encrypt(String plainText) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    /* (non-Javadoc)
+     * @see io.jsondb.crypto.ICipher#decrypt(java.lang.String)
+     */
+    @Override
+    public String decrypt(String cipherText) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+    
   }
 }
