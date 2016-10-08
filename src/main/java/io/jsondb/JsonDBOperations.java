@@ -158,7 +158,7 @@ public interface JsonDBOperations {
   boolean collectionExists(String collectionName);
 
   /**
-   * is a collection readonly, 
+   * is a collection readonly,
    * A collection can be readonly if its schema version does not match the actualSchema version
    *
    * @param entityClass class that determines the collection
@@ -240,7 +240,7 @@ public interface JsonDBOperations {
 
   /**
    * Insert the object into correct collection. The collection type of the object is automatically determined.
-   * 
+   *
    * Insert is used to initially store the object into the database. To update an existing object use the save method.
    *
    * @param objectToSave the object to store in the collection
@@ -248,10 +248,10 @@ public interface JsonDBOperations {
    *            and member of the baseScanPackage
    */
   <T> void insert(Object objectToSave);
-  
+
   /**
    * Insert the object into the specified collection.
-   * 
+   *
    * Insert is used to initially store the object into the database. To update an existing object use the save method.
    *
    * @param objectToSave the object to store in the collection
@@ -263,17 +263,17 @@ public interface JsonDBOperations {
 
   /**
    * Insert a Collection of objects into a collection in a single batch write to the database.
-   * 
+   *
    * @param batchToSave  the list of objects to save.
    * @param entityClass  class that determines the collection to use
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
    */
   <T> void insert(Collection<? extends T> batchToSave, Class<T> entityClass);
-  
+
   /**
    * Insert a Collection of objects into a collection in a single batch write to the database.
-   * 
+   *
    * @param batchToSave  the list of objects to save.
    * @param collectionName  name of the collection to store the object in
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
@@ -283,26 +283,28 @@ public interface JsonDBOperations {
 
   /**
    * Save the object to the collection for the entity type of the object to save.
-   * This will perform an insert if the object is not already present, that is an 'upsert'. 
-   * 
+   * This will throw a exception if the object is not already present.
+   * This is a not same as MongoDB behaviour
+   *
    * @param objectToSave  the object to store in the collection
-   * @param entityClass  class that determines the collection to use 
+   * @param entityClass  class that determines the collection to use
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
    */
   <T> void save(Object objectToSave, Class<T> entityClass);
-  
+
   /**
    * Save the object to the collection for the entity type of the object to save.
-   * This will perform an insert if the object is not already present, that is an 'upsert'. 
-   * 
+   * This will throw a exception if the object is not already present.
+   * This is a not same as MongoDB behaviour
+   *
    * @param objectToSave  the object to store in the collection
    * @param collectionName  name of the collection to store the object in
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
    */
   <T> void save(Object objectToSave, String collectionName);
-  
+
   <T> int findAndRemove(String jxQuery, Class<T> entityClass);
   <T> int findAndRemove(String jxQuery, Class<T> entityClass, String collectionName);
 
@@ -315,7 +317,7 @@ public interface JsonDBOperations {
   <T> int findAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> int findAndModify(String jxQuery, Update update, String collectionName);
 
-  
+
 
   <T> void upsert(Object objectToSave);
   <T> void upsert(Object objectToSave, String collectionName);

@@ -46,6 +46,7 @@ import io.jsondb.testmodel.Site;
 import io.jsondb.testmodel.Volume;
 
 /**
+ * Junit Tests for the insert() apis
  * @version 1.0 06-Oct-2016
  */
 public class InsertTests {
@@ -74,10 +75,10 @@ public class InsertTests {
   }
 
   /**
-   * Test to insert a new object into a known collection type which has some data.
+   * Test to insert a new object into a non-existing collection.
    */
   @Test
-  public void testInsert_IntoKnownCollection() {
+  public void testInsert_IntoNonExistingCollection() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
     jsonDBTemplate.insert(new Site());
