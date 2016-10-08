@@ -50,7 +50,7 @@ public class DefaultAESCipher implements ICipher {
 
   private final String encryptionKey;
   private final String charset;
-  
+
   private Cipher encryptCipher;
   private Cipher decryptCipher;
   private ReentrantLock encryptionLock;
@@ -67,7 +67,7 @@ public class DefaultAESCipher implements ICipher {
     this(encryptionKey, "UTF-8");
   }
 
-  public DefaultAESCipher(String encryptionKey, String charset) 
+  public DefaultAESCipher(String encryptionKey, String charset)
       throws GeneralSecurityException, UnsupportedEncodingException {
     super();
     this.encryptionKey = encryptionKey;
@@ -131,7 +131,7 @@ public class DefaultAESCipher implements ICipher {
 
   /**
    * A method to decrypt the provided cipher text.
-   * 
+   *
    * @param cipherText AES encrypted cipherText
    * @return decrypted text
    */
@@ -144,14 +144,14 @@ public class DefaultAESCipher implements ICipher {
         byte[] bytes = Base64.getDecoder().decode(cipherText);
         decryptedValue = new String(decryptCipher.doFinal(bytes), charset);
       } catch (UnsupportedEncodingException e) {
-        logger.error("DefaultAESCipher failed to dencrypt text", e);
-        throw new JsonDBException("DefaultAESCipher failed to dencrypt text", e);
+        logger.error("DefaultAESCipher failed to decrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to decrypt text", e);
       } catch (IllegalBlockSizeException e) {
-        logger.error("DefaultAESCipher failed to dencrypt text", e);
-        throw new JsonDBException("DefaultAESCipher failed to dencrypt text", e);
+        logger.error("DefaultAESCipher failed to decrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to decrypt text", e);
       } catch (BadPaddingException e) {
-        logger.error("DefaultAESCipher failed to dencrypt text", e);
-        throw new JsonDBException("DefaultAESCipher failed to dencrypt text", e);
+        logger.error("DefaultAESCipher failed to decrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to decrypt text", e);
       }
       return decryptedValue;
     } finally{
