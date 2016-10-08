@@ -39,6 +39,8 @@ import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.jsondb.JsonDBException;
+
 /**
  * @author Farooq Khan
  * @version 1.0 25-Sep-2016
@@ -80,16 +82,16 @@ public class DefaultAESCipher implements ICipher {
       encryptCipher.init(Cipher.ENCRYPT_MODE, key,new IvParameterSpec(encryptionKey.getBytes("UTF-8")));
       decryptCipher.init(Cipher.DECRYPT_MODE, key,new IvParameterSpec(encryptionKey.getBytes("UTF-8")));
     } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
-      logger.error("Failed to create AESChiper", e);
+      logger.error("Failed to create DefaultAESCipher", e);
       throw e;
     } catch (UnsupportedEncodingException e) {
-      logger.error("Failed to create AESChiper", e);
+      logger.error("Failed to create DefaultAESCipher", e);
       throw e;
     } catch (InvalidKeyException e) {
-      logger.error("Failed to create AESChiper", e);
+      logger.error("Failed to create DefaultAESCipher", e);
       throw e;
     } catch (InvalidAlgorithmParameterException e) {
-      logger.error("Failed to create AESChiper", e);
+      logger.error("Failed to create DefaultAESCipher", e);
       throw e;
     }
   }
@@ -111,14 +113,14 @@ public class DefaultAESCipher implements ICipher {
       try {
         cipherBytes = encryptCipher.doFinal(plainText.getBytes(charset));
       } catch (UnsupportedEncodingException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error("DefaultAESCipher failed to encrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to encrypt text", e);
       } catch (IllegalBlockSizeException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error("DefaultAESCipher failed to encrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to encrypt text", e);
       } catch (BadPaddingException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error("DefaultAESCipher failed to encrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to encrypt text", e);
       }
       return Base64.getEncoder().encodeToString(cipherBytes);
     } finally{
@@ -142,14 +144,14 @@ public class DefaultAESCipher implements ICipher {
         byte[] bytes = Base64.getDecoder().decode(cipherText);
         decryptedValue = new String(decryptCipher.doFinal(bytes), charset);
       } catch (UnsupportedEncodingException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error("DefaultAESCipher failed to dencrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to dencrypt text", e);
       } catch (IllegalBlockSizeException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error("DefaultAESCipher failed to dencrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to dencrypt text", e);
       } catch (BadPaddingException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+        logger.error("DefaultAESCipher failed to dencrypt text", e);
+        throw new JsonDBException("DefaultAESCipher failed to dencrypt text", e);
       }
       return decryptedValue;
     } finally{

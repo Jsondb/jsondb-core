@@ -61,8 +61,7 @@ public class JsonDBConfigTests {
     
     ICipher mCipher = new MyCipher();
     dbConfig.setCipher(mCipher);
-    assertEquals(mCipher, dbConfig.getCipher());
-    
+    assertEquals(mCipher, dbConfig.getCipher());   
   }
   
   private class MyCipher implements ICipher {
