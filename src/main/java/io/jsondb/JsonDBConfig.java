@@ -95,19 +95,16 @@ public class JsonDBConfig {
   }
   public void setDbFilesLocationString(String dbFilesLocationString) {
     this.dbFilesLocationString = dbFilesLocationString;
+    this.dbFilesLocation = new File(dbFilesLocationString);
+    this.dbFilesPath = dbFilesLocation.toPath();
   }
   public File getDbFilesLocation() {
     return dbFilesLocation;
   }
-  public void setDbFilesLocation(File dbFilesLocation) {
-    this.dbFilesLocation = dbFilesLocation;
-  }
   public Path getDbFilesPath() {
     return dbFilesPath;
   }
-  public void setDbFilesPath(Path dbFilesPath) {
-    this.dbFilesPath = dbFilesPath;
-  }
+
   public String getBaseScanPackage() {
     return baseScanPackage;
   }
