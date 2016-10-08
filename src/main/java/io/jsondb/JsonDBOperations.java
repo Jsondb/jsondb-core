@@ -305,19 +305,55 @@ public interface JsonDBOperations {
    */
   <T> void save(Object objectToSave, String collectionName);
 
+  /**
+   * Remove the given object from the collection by id.
+   *
+   * @param object  the object to remove from the collection
+   * @param entityClass  class that determines the collection to use
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return  No of objects removed.
+   */
+  <T> int remove(Object object, Class<T> entityClass);
+  
+  /**
+   * Remove the given object from the collection by id.
+   *
+   * @param object  the object to remove from the collection
+   * @param collectionName  name of the collection to remove the object from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return  No of objects removed.
+   */
+  <T> int remove(Object object, String collectionName);
+
+  /**
+   * Remove a Collection of objects from a collection in a single batch write to the database.
+   *
+   * @param batchToRemove  the list of objects to remove.
+   * @param entityClass  class that determines the collection to use
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return  No of objects removed.
+   */
+  <T> int remove(Collection<? extends T> batchToRemove, Class<T> entityClass);
+  
+  /**
+   * Remove a Collection of objects from a collection in a single batch write to the database.
+   *
+   * @param batchToRemove  the list of objects to remove.
+   * @param collectionName  name of the collection to remove the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return  No of objects removed.
+   */
+  <T> int remove(Collection<? extends T> batchToRemove, String collectionName);
+  
   <T> int findAndRemove(String jxQuery, Class<T> entityClass);
   <T> int findAndRemove(String jxQuery, Class<T> entityClass, String collectionName);
 
-  <T> int remove(Object object, Class<T> entityClass);
-  <T> int remove(Object object, String collectionName);
-
-  <T> int remove(Collection<? extends T> batchToRemove, Class<T> entityClass);
-  <T> int remove(Collection<? extends T> batchToRemove, String collectionName);
-
   <T> int findAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> int findAndModify(String jxQuery, Update update, String collectionName);
-
-
 
   <T> void upsert(Object objectToSave);
   <T> void upsert(Object objectToSave, String collectionName);

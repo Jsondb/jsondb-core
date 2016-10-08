@@ -772,6 +772,116 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
   
   /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.Class)
+   */
+  @Override
+  public <T> int remove(Object object, Class<T> entityClass) {
+    return remove(object, Util.determineCollectionName(entityClass));
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.String)
+   */
+  @Override
+  public <T> int remove(Object object, String collectionName) {
+    if (null == object) {
+      throw new InvalidJsonDbApiUsageException("Null Object cannot be removed from DB");
+    }
+    Util.ensureNotRestricted(object);
+
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    collectionMeta.getCollectionLock().writeLock().lock();
+    try {
+      @SuppressWarnings("unchecked")
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+
+      CollectionMetaData cmd = cmdMap.get(collectionName);
+      Object id = Util.getIdForEntity(object, cmd.getIdAnnotatedFieldGetterMethod());
+      if (!collection.containsKey(id)) {
+        throw new InvalidJsonDbApiUsageException(String.format("Objects with Id %s not found in collection %s", id, collectionName));
+      }
+
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+      boolean substractResult = jw.removeFromJsonFile(collection, id);
+      if(substractResult) {
+        collection.remove(id);
+        return 1;
+      } else {
+        return 0;
+      }
+    } finally {
+      collectionMeta.getCollectionLock().writeLock().unlock();
+    }
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#remove(java.util.Collection, java.lang.Class)
+   */
+  @Override
+  public <T> int remove(Collection<? extends T> batchToRemove, Class<T> entityClass) {
+    return remove(batchToRemove, Util.determineCollectionName(entityClass));
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#remove(java.util.Collection, java.lang.String)
+   */
+  @Override
+  public <T> int remove(Collection<? extends T> batchToRemove, String collectionName) {
+    if (null == batchToRemove) {
+      throw new InvalidJsonDbApiUsageException("Null Object batch cannot be removed from DB");
+    }
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    cmd.getCollectionLock().writeLock().lock();
+    try {
+      @SuppressWarnings("unchecked")
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+
+      Set<Object> removeIds = new HashSet<Object>();
+
+      for (T o : batchToRemove) {
+        Object id = Util.getIdForEntity(o, cmd.getIdAnnotatedFieldGetterMethod());
+        if (collection.containsKey(id)) {
+          removeIds.add(id);
+        }
+      }
+
+      if(removeIds.size() < 1) {
+        return 0;
+      }
+
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+      boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
+
+      if(substractResult) {
+        for (Object id : removeIds) {
+          collection.remove(id);
+        }
+      }
+      return removeIds.size();
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
+    }
+  }
+  
+  /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#findAndRemove(java.lang.String, java.lang.Class)
    */
   @Override
@@ -785,44 +895,6 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> int findAndRemove(String jxQuery, Class<T> entityClass,
-      String collectionName) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.Class)
-   */
-  @Override
-  public <T> int remove(Object object, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.String)
-   */
-  @Override
-  public <T> int remove(Object object, String collectionName) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#remove(java.util.Collection, java.lang.Class)
-   */
-  @Override
-  public <T> int remove(Collection<? extends T> batchToRemove,
-      Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#remove(java.util.Collection, java.lang.String)
-   */
-  @Override
-  public <T> int remove(Collection<? extends T> batchToRemove,
       String collectionName) {
     // TODO Auto-generated method stub
     return 0;
