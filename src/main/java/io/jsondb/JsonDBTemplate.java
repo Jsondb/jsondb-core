@@ -718,8 +718,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> void save(Object objectToSave, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-
+    save(objectToSave, Util.determineCollectionName(entityClass));
   }
 
   /* (non-Javadoc)
@@ -727,8 +726,49 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> void save(Object objectToSave, String collectionName) {
-    // TODO Auto-generated method stub
+    if (null == objectToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object cannot be updated into DB");
+    }
+    Util.ensureNotRestricted(objectToSave);
+    Object objToSave = Util.deepCopy(objectToSave);
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    collectionMeta.getCollectionLock().writeLock().lock();
+    try {
+      @SuppressWarnings("unchecked")
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
 
+      CollectionMetaData cmd = cmdMap.get(collectionName);
+      Object id = Util.getIdForEntity(objToSave, cmd.getIdAnnotatedFieldGetterMethod());
+
+      T existingObject = collection.get(id);
+      if (null == existingObject) {
+        throw new InvalidJsonDbApiUsageException(
+            String.format("Document with Id: '%s' not found in Collection by name '%s' not found. Insert or Upsert the object first.",
+                id, collectionName));
+      }
+      if(encrypted && cmd.hasSecret()){
+        CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
+      }
+      JsonWriter jw = null;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+      @SuppressWarnings("unchecked")
+      boolean updateResult = jw.updateInJsonFile(collection, id, (T)objToSave);
+      if (updateResult) {
+        @SuppressWarnings("unchecked")
+        T newObject = (T) objToSave;
+        collection.put(id, newObject);
+      }
+    } finally {
+      collectionMeta.getCollectionLock().writeLock().unlock();
+    }
   }
   
   /* (non-Javadoc)
