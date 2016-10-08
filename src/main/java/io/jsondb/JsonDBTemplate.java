@@ -770,7 +770,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       collectionMeta.getCollectionLock().writeLock().unlock();
     }
   }
-  
+
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.Class)
    */
@@ -880,7 +880,151 @@ public class JsonDBTemplate implements JsonDBOperations {
       cmd.getCollectionLock().writeLock().unlock();
     }
   }
-  
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#upsert(java.lang.Object)
+   */
+  @Override
+  public <T> void upsert(Object objectToSave) {
+    if (null == objectToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object cannot be upserted into DB");
+    }
+    Util.ensureNotRestricted(objectToSave);
+    upsert(objectToSave, Util.determineEntityCollectionName(objectToSave));
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#upsert(java.lang.Object, java.lang.String)
+   */
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> void upsert(Object objectToSave, String collectionName) {
+    if (null == objectToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object cannot be upserted into DB");
+    }
+    Util.ensureNotRestricted(objectToSave);
+    Object objToSave = Util.deepCopy(objectToSave);
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    collectionMeta.getCollectionLock().writeLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
+      }
+      CollectionMetaData cmd = cmdMap.get(collectionName);
+      Object id = Util.getIdForEntity(objectToSave, cmd.getIdAnnotatedFieldGetterMethod());
+      if(encrypted && cmd.hasSecret()){
+        CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
+      }
+
+      boolean insert = true;
+      if (null == id) {
+        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod());
+      } else if (collection.containsKey(id)) {
+        insert = false;
+      }
+
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+
+      if (insert) {
+        boolean insertResult = jw.appendToJsonFile(collection.values(), objToSave);
+        if(insertResult) {
+          collection.put(Util.deepCopy(id), (T) objToSave);
+        }
+      } else {
+        boolean updateResult = jw.updateInJsonFile(collection, id, (T)objToSave);
+        if (updateResult) {
+          T newObject = (T) objToSave;
+          collection.put(id, newObject);
+        }
+      }
+    } finally {
+      collectionMeta.getCollectionLock().writeLock().unlock();
+    }
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#upsert(java.util.Collection, java.lang.Class)
+   */
+  @Override
+  public <T> void upsert(Collection<? extends T> batchToSave, Class<T> entityClass) {
+    upsert(batchToSave, Util.determineCollectionName(entityClass));
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#upsert(java.util.Collection, java.lang.String)
+   */
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> void upsert(Collection<? extends T> batchToSave, String collectionName) {
+    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    collectionMeta.getCollectionLock().writeLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
+      }
+      CollectionMetaData cmd = cmdMap.get(collectionName);
+      Set<Object> uniqueIds = new HashSet<Object>();
+
+      Map<Object, T> collectionToInsert = new LinkedHashMap<Object, T>();
+      Map<Object, T> collectionToUpdate = new LinkedHashMap<Object, T>();
+
+      for (T o : batchToSave) {
+        Object obj = Util.deepCopy(o);
+        Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
+        if(encrypted && cmd.hasSecret()){
+          CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
+        }
+        boolean insert = true;
+        if (null == id) {
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod());
+        } else if (collection.containsKey(id)) {
+          insert = false;
+        }
+        if (!uniqueIds.add(id)) {
+          throw new InvalidJsonDbApiUsageException("Duplicate object with id: " + id + " within the passed in parameter");
+        }
+        if (insert) {
+          collectionToInsert.put(Util.deepCopy(id), (T) obj);
+        } else {
+          collectionToUpdate.put(Util.deepCopy(id), (T) obj);
+        }
+      }
+
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+
+      if (collectionToInsert.size() > 0) {
+        boolean insertResult = jw.appendToJsonFile(collection.values(), collectionToInsert.values());
+        if(insertResult) {
+          collection.putAll(collectionToInsert);
+        }
+      }
+
+      if (collectionToUpdate.size() > 0) {
+        boolean updateResult = jw.updateInJsonFile(collection, collectionToUpdate);
+        if (updateResult) {
+         collection.putAll(collectionToUpdate);
+        }
+      }
+
+    } finally {
+      collectionMeta.getCollectionLock().writeLock().unlock();
+    }
+  }
+
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#findAndRemove(java.lang.String, java.lang.Class)
    */
@@ -918,44 +1062,6 @@ public class JsonDBTemplate implements JsonDBOperations {
       String collectionName) {
     // TODO Auto-generated method stub
     return 0;
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#upsert(java.lang.Object)
-   */
-  @Override
-  public <T> void upsert(Object objectToSave) {
-    // TODO Auto-generated method stub
-
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#upsert(java.lang.Object, java.lang.String)
-   */
-  @Override
-  public <T> void upsert(Object objectToSave, String collectionName) {
-    // TODO Auto-generated method stub
-
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#upsert(java.util.Collection, java.lang.Class)
-   */
-  @Override
-  public <T> void upsert(Collection<? extends T> batchToSave,
-      Class<T> entityClass) {
-    // TODO Auto-generated method stub
-
-  }
-
-  /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#upsert(java.util.Collection, java.lang.String)
-   */
-  @Override
-  public <T> void upsert(Collection<? extends T> batchToSave,
-      String collectionName) {
-    // TODO Auto-generated method stub
-
   }
 
   /* (non-Javadoc)

@@ -315,7 +315,7 @@ public interface JsonDBOperations {
    * @return  No of objects removed.
    */
   <T> int remove(Object object, Class<T> entityClass);
-  
+
   /**
    * Remove the given object from the collection by id.
    *
@@ -337,7 +337,7 @@ public interface JsonDBOperations {
    * @return  No of objects removed.
    */
   <T> int remove(Collection<? extends T> batchToRemove, Class<T> entityClass);
-  
+
   /**
    * Remove a Collection of objects from a collection in a single batch write to the database.
    *
@@ -348,18 +348,55 @@ public interface JsonDBOperations {
    * @return  No of objects removed.
    */
   <T> int remove(Collection<? extends T> batchToRemove, String collectionName);
-  
+
+  /**
+   * Performs an upsert. If no document is found that matches the query, a new document is
+   * created and inserted, else the found document is updated with contents of object
+   *
+   * @param objectToSave  the object to update.
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   */
+  <T> void upsert(Object objectToSave);
+
+  /**
+   * Performs an upsert. If no document is found that matches the query, a new document is
+   * created and inserted, else the found document is updated with contents of object
+   *
+   * @param objectToSave  the object to update.
+   * @param collectionName  name of the collection to update the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   */
+  <T> void upsert(Object objectToSave, String collectionName);
+
+  /**
+   * Performs an upsert. If no document is found that matches the input, new documents are
+   * created and inserted, else the found document is updated with contents of object
+   *
+   * @param batchToSave  the list of objects to update.
+   * @param entityClass  class that determines the collection to use
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   */
+  <T> void upsert(Collection<? extends T> batchToSave, Class<T> entityClass);
+
+  /**
+   * Performs an upsert. If no document is found that matches the input, new documents are
+   * created and inserted, else the found document is updated with contents of object
+   *
+   * @param batchToSave  the list of objects to update.
+   * @param collectionName  name of the collection to update the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   */
+  <T> void upsert(Collection<? extends T> batchToSave, String collectionName);
+
   <T> int findAndRemove(String jxQuery, Class<T> entityClass);
   <T> int findAndRemove(String jxQuery, Class<T> entityClass, String collectionName);
 
   <T> int findAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> int findAndModify(String jxQuery, Update update, String collectionName);
-
-  <T> void upsert(Object objectToSave);
-  <T> void upsert(Object objectToSave, String collectionName);
-
-  <T> void upsert(Collection<? extends T> batchToSave, Class<T> entityClass);
-  <T> void upsert(Collection<? extends T> batchToSave, String collectionName);
 
   /**
    * This method backs up JSONDB collections to specified backup path
