@@ -308,24 +308,24 @@ public interface JsonDBOperations {
   /**
    * Remove the given object from the collection by id.
    *
-   * @param object  the object to remove from the collection
+   * @param objectToRemove  the object to remove from the collection
    * @param entityClass  class that determines the collection to use
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
-   * @return  No of objects removed.
+   * @return  the object that was actually removed or null
    */
-  <T> int remove(Object object, Class<T> entityClass);
+  <T> T remove(Object objectToRemove, Class<T> entityClass);
 
   /**
    * Remove the given object from the collection by id.
    *
-   * @param object  the object to remove from the collection
+   * @param objectToRemove  the object to remove from the collection
    * @param collectionName  name of the collection to remove the object from
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
-   * @return  No of objects removed.
+   * @return  the object that was actually removed or null
    */
-  <T> int remove(Object object, String collectionName);
+  <T> T remove(Object objectToRemove, String collectionName);
 
   /**
    * Remove a Collection of objects from a collection in a single batch write to the database.
@@ -334,9 +334,9 @@ public interface JsonDBOperations {
    * @param entityClass  class that determines the collection to use
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
-   * @return  No of objects removed.
+   * @return  List of objects actually removed or null
    */
-  <T> int remove(Collection<? extends T> batchToRemove, Class<T> entityClass);
+  <T> List<T> remove(Collection<? extends T> batchToRemove, Class<T> entityClass);
 
   /**
    * Remove a Collection of objects from a collection in a single batch write to the database.
@@ -345,9 +345,9 @@ public interface JsonDBOperations {
    * @param collectionName  name of the collection to remove the objects from
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
-   * @return  No of objects removed.
+   * @return  List of objects actually removed or null
    */
-  <T> int remove(Collection<? extends T> batchToRemove, String collectionName);
+  <T> List<T> remove(Collection<? extends T> batchToRemove, String collectionName);
 
   /**
    * Performs an upsert. If no document is found that matches the query, a new document is
@@ -392,8 +392,53 @@ public interface JsonDBOperations {
    */
   <T> void upsert(Collection<? extends T> batchToSave, String collectionName);
 
-  <T> int findAndRemove(String jxQuery, Class<T> entityClass);
-  <T> int findAndRemove(String jxQuery, Class<T> entityClass, String collectionName);
+  /**
+   * Map the results of the jxQuery on the collection for the entity type to a single 
+   * instance of an object of the specified type. The first document that matches the query
+   * is returned and also removed from the collection in the database. 
+   * 
+   * @param jxQuery  JxPath query string
+   * @param entityClass  class that determines the collection to use
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the removed object or null
+   */
+  <T> T findAndRemove(String jxQuery, Class<T> entityClass);
+  
+  /**
+   * Map the results of the jxQuery on the collection for the entity type to a single 
+   * instance of an object of the specified type. The first document that matches the query
+   * is returned and also removed from the collection in the database. 
+   * 
+   * @param jxQuery  JxPath query string
+   * @param collectionName  name of the collection to update the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the removed object or null
+   */
+  <T> T findAndRemove(String jxQuery, String collectionName);
+  
+  /**
+   * Returns and removes all documents matching the given query form the collection used to store the entityClass.
+   *
+   * @param jxQuery  JxPath query string
+   * @param entityClass  class that determines the collection to use
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the list of removed objects or null
+   */
+  <T> List<T> findAllAndRemove(String jxQuery, Class<T> entityClass);
+  
+  /**
+   * Returns and removes all documents matching the given query form the collection used to store the entityClass.
+   *
+   * @param jxQuery  JxPath query string
+   * @param collectionName  name of the collection to update the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the list of removed objects or null
+   */
+  <T> List<T> findAllAndRemove(String jxQuery, String collectionName);
 
   <T> int findAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> int findAndModify(String jxQuery, Update update, String collectionName);

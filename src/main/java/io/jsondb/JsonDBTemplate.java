@@ -775,19 +775,19 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.Class)
    */
   @Override
-  public <T> int remove(Object object, Class<T> entityClass) {
-    return remove(object, Util.determineCollectionName(entityClass));
+  public <T> T remove(Object objectToRemove, Class<T> entityClass) {
+    return remove(objectToRemove, Util.determineCollectionName(entityClass));
   }
 
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.String)
    */
   @Override
-  public <T> int remove(Object object, String collectionName) {
-    if (null == object) {
+  public <T> T remove(Object objectToRemove, String collectionName) {
+    if (null == objectToRemove) {
       throw new InvalidJsonDbApiUsageException("Null Object cannot be removed from DB");
     }
-    Util.ensureNotRestricted(object);
+    Util.ensureNotRestricted(objectToRemove);
 
     CollectionMetaData collectionMeta = cmdMap.get(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
@@ -799,7 +799,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
 
       CollectionMetaData cmd = cmdMap.get(collectionName);
-      Object id = Util.getIdForEntity(object, cmd.getIdAnnotatedFieldGetterMethod());
+      Object id = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
       if (!collection.containsKey(id)) {
         throw new InvalidJsonDbApiUsageException(String.format("Objects with Id %s not found in collection %s", id, collectionName));
       }
@@ -813,10 +813,10 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
       boolean substractResult = jw.removeFromJsonFile(collection, id);
       if(substractResult) {
-        collection.remove(id);
-        return 1;
+        T objectRemoved = collection.remove(id);
+        return objectRemoved;
       } else {
-        return 0;
+        return null;
       }
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
@@ -827,7 +827,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#remove(java.util.Collection, java.lang.Class)
    */
   @Override
-  public <T> int remove(Collection<? extends T> batchToRemove, Class<T> entityClass) {
+  public <T> List<T> remove(Collection<? extends T> batchToRemove, Class<T> entityClass) {
     return remove(batchToRemove, Util.determineCollectionName(entityClass));
   }
 
@@ -835,7 +835,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#remove(java.util.Collection, java.lang.String)
    */
   @Override
-  public <T> int remove(Collection<? extends T> batchToRemove, String collectionName) {
+  public <T> List<T> remove(Collection<? extends T> batchToRemove, String collectionName) {
     if (null == batchToRemove) {
       throw new InvalidJsonDbApiUsageException("Null Object batch cannot be removed from DB");
     }
@@ -858,7 +858,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
 
       if(removeIds.size() < 1) {
-        return 0;
+        return null;
       }
 
       JsonWriter jw;
@@ -870,12 +870,14 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
       boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
 
+      List<T> removedObjects = null;
       if(substractResult) {
+        removedObjects = new ArrayList<T>();
         for (Object id : removeIds) {
-          collection.remove(id);
+          removedObjects.add(collection.remove(id));
         }
       }
-      return removeIds.size();
+      return removedObjects;
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
     }
@@ -1029,19 +1031,45 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#findAndRemove(java.lang.String, java.lang.Class)
    */
   @Override
-  public <T> int findAndRemove(String jxQuery, Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return 0;
+  public <T> T findAndRemove(String jxQuery, Class<T> entityClass) {
+    return findAndRemove(jxQuery, Util.determineCollectionName(entityClass));
   }
 
   /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#findAndRemove(java.lang.String, java.lang.Class, java.lang.String)
+   * @see org.jsondb.JsonDBOperations#findAndRemove(java.lang.String, java.lang.String)
    */
   @Override
-  public <T> int findAndRemove(String jxQuery, Class<T> entityClass,
-      String collectionName) {
-    // TODO Auto-generated method stub
-    return 0;
+  public <T> T findAndRemove(String jxQuery, String collectionName) {
+    List<T> toRemoveList = find(jxQuery, collectionName);
+    T objectRemoved = null;
+    if (null != toRemoveList) {
+      T toRemove = toRemoveList.get(0);
+      if (null != toRemove) {
+        objectRemoved = remove(toRemove, collectionName);
+      }
+    }
+    return objectRemoved;
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#findAllAndRemove(java.lang.String, java.lang.Class)
+   */
+  @Override
+  public <T> List<T> findAllAndRemove(String jxQuery, Class<T> entityClass) {
+    return findAllAndRemove(jxQuery, Util.determineCollectionName(entityClass));
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#findAllAndRemove(java.lang.String, java.lang.String)
+   */
+  @Override
+  public <T> List<T> findAllAndRemove(String jxQuery, String collectionName) {
+    List<T> toRemove = find(jxQuery, collectionName);
+    if (null == toRemove) {
+      return null;
+    } else {
+      return remove(toRemove, collectionName);
+    }
   }
 
   /* (non-Javadoc)
