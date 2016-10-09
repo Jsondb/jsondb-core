@@ -448,9 +448,36 @@ public interface JsonDBOperations {
    */
   <T> List<T> findAllAndRemove(String jxQuery, String collectionName);
 
-  <T> int findAndModify(String jxQuery, Update update, Class<T> entityClass);
-  <T> int findAndModify(String jxQuery, Update update, String collectionName);
+  /**
+   * Triggers findAndModify to apply provided Update on the first document matching Criteria of given Query.
+   *
+   * Both the find and remove operation is done atomically
+   *
+   * @param jxQuery  JxPath query string
+   * @param update  The Update operation to perform
+   * @param entityClass  class that determines the collection to use
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return first object that was modified or null
+   */
+  <T> T findAndModify(String jxQuery, Update update, Class<T> entityClass);
+  
+  /**
+   * Triggers findAndModify to apply provided Update on the first document matching Criteria of given Query.
+   *
+   * Both the find and remove operation is done atomically
+   *
+   * @param jxQuery  JxPath query string
+   * @param update  The Update operation to perform
+   * @param collectionName  name of the collection to update the objects from
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return first object that was modified or null
+   */
+  <T> T findAndModify(String jxQuery, Update update, String collectionName);
 
+  <T> List<T> findAllAndModify(String jxQuery, Update update, Class<T> entityClass);
+  <T> List<T> findAllAndModify(String jxQuery, Update update, String collectionName);
   /**
    * This method backs up JSONDB collections to specified backup path
    *

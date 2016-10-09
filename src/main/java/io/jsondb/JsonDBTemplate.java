@@ -23,6 +23,7 @@ package io.jsondb;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.CharacterCodingException;
 import java.nio.file.Files;
@@ -34,12 +35,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.jxpath.JXPathContext;
-import org.apache.commons.jxpath.JXPathNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -346,8 +348,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#updateCollectionSchema(org.jsondb.query.CollectionSchemaUpdate, java.lang.Class)
    */
   @Override
-  public <T> void updateCollectionSchema(CollectionSchemaUpdate update,
-      Class<T> entityClass) {
+  public <T> void updateCollectionSchema(CollectionSchemaUpdate update, Class<T> entityClass) {
     // TODO Auto-generated method stub
 
   }
@@ -356,8 +357,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#updateCollectionSchema(org.jsondb.query.CollectionSchemaUpdate, java.lang.String)
    */
   @Override
-  public <T> void updateCollectionSchema(CollectionSchemaUpdate update,
-      String collectionName) {
+  public <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName) {
     // TODO Auto-generated method stub
 
   }
@@ -466,22 +466,17 @@ public class JsonDBTemplate implements JsonDBOperations {
     cmd.getCollectionLock().readLock().lock();
     try {
       JXPathContext context = contextsRef.get().get(collectionName);
-      try {
-        Iterator<T> resultItr = context.iterate(jxQuery);
-        List<T> newCollection = new ArrayList<T>();
-        while (resultItr.hasNext()) {
-          T document = resultItr.next();
-          Object obj = Util.deepCopy(document);
-          if(encrypted && cmd.hasSecret() && null != obj) {
-            CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
-          }
-          newCollection.add((T) obj);
+      Iterator<T> resultItr = context.iterate(jxQuery);
+      List<T> newCollection = new ArrayList<T>();
+      while (resultItr.hasNext()) {
+        T document = resultItr.next();
+        Object obj = Util.deepCopy(document);
+        if(encrypted && cmd.hasSecret() && null != obj) {
+          CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
         }
-        return newCollection;
-      } catch (JXPathNotFoundException e) {
-        //TODO: Log the exception this is not a error state the XPATH query returned nothing.
-        return null;
+        newCollection.add((T) obj);
       }
+      return newCollection;
     } finally {
       cmd.getCollectionLock().readLock().unlock();
     }
@@ -1026,7 +1021,6 @@ public class JsonDBTemplate implements JsonDBOperations {
          collection.putAll(collectionToUpdate);
         }
       }
-
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
     }
@@ -1160,20 +1154,96 @@ public class JsonDBTemplate implements JsonDBOperations {
    * @see org.jsondb.JsonDBOperations#findAndModify(java.lang.String, org.jsondb.query.Update, java.lang.Class)
    */
   @Override
-  public <T> int findAndModify(String jxQuery, Update update,
-      Class<T> entityClass) {
-    // TODO Auto-generated method stub
-    return 0;
+  public <T> T findAndModify(String jxQuery, Update update, Class<T> entityClass) {
+    return findAndModify(jxQuery, update, Util.determineCollectionName(entityClass));
   }
 
   /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#findAndModify(java.lang.String, org.jsondb.query.Update, java.lang.String)
    */
+  @SuppressWarnings("unchecked")
   @Override
-  public <T> int findAndModify(String jxQuery, Update update,
+  public <T> T findAndModify(String jxQuery, Update update, String collectionName) {
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if(null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+    }
+    cmd.getCollectionLock().writeLock().lock();
+    try {
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+
+      JXPathContext context = contextsRef.get().get(collectionName);
+      Iterator<T> resultItr = context.iterate(jxQuery);
+      T objectToModify = null;
+      T clonedModifiedObject = null;
+      
+      while (resultItr.hasNext()) {
+        objectToModify = resultItr.next();
+        break; // Use only the first element we find.
+      }
+      if (null != objectToModify) {
+        //Clone it because we dont want to touch the in-memory object until we have really saved it
+        clonedModifiedObject = (T) Util.deepCopy(objectToModify);
+        for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
+          Object newValue = Util.deepCopy(entry.getValue());
+          if(encrypted && cmd.hasSecret() && cmd.isSecretField(entry.getKey())){
+            newValue = dbConfig.getCipher().encrypt(newValue.toString());
+          }
+          try {
+            BeanUtils.copyProperty(clonedModifiedObject, entry.getKey(), newValue);
+          } catch (IllegalAccessException | InvocationTargetException e) {
+            logger.error("Failed to copy updated data into existing collection document using BeanUtils", e);
+            return null;
+          }
+        }
+        
+        Object idToModify = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
+        JsonWriter jw = null;
+        try {
+          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+        } catch (IOException ioe) {
+          logger.error("Failed to obtain writer for " + collectionName, ioe);
+          throw new JsonDBException("Failed to save " + collectionName, ioe);
+        }
+        boolean updateResult = jw.updateInJsonFile(collection, idToModify, clonedModifiedObject);
+        if (updateResult) {
+         collection.put(idToModify, clonedModifiedObject);
+         //Clone it once more because we want to disconnect it from the in-memory objects
+         T returnObj = (T) Util.deepCopy(clonedModifiedObject);
+         if(encrypted && cmd.hasSecret() && null!= returnObj){
+           CryptoUtil.decryptFields(returnObj, cmd, dbConfig.getCipher());
+         }
+         return returnObj;
+        }
+      }
+      return null;
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
+    }
+  }
+
+  
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findAllAndModify(java.lang.String, io.jsondb.query.Update, java.lang.Class)
+   */
+  @Override
+  public <T> List<T> findAllAndModify(String jxQuery, Update update,
+      Class<T> entityClass) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findAllAndModify(java.lang.String, io.jsondb.query.Update, java.lang.String)
+   */
+  @Override
+  public <T> List<T> findAllAndModify(String jxQuery, Update update,
       String collectionName) {
     // TODO Auto-generated method stub
-    return 0;
+    return null;
   }
 
   /* (non-Javadoc)
