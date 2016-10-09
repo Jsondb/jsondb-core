@@ -393,12 +393,12 @@ public interface JsonDBOperations {
   <T> void upsert(Collection<? extends T> batchToSave, String collectionName);
 
   /**
-   * Map the results of the jxQuery on the collection for the entity type to a single 
+   * Map the results of the jxQuery on the collection for the entity type to a single
    * instance of an object of the specified type. The first document that matches the query
    * is returned and also removed from the collection in the database.
-   * 
-   * Both the find and remove operation is done a single atomic way
-   * 
+   *
+   * Both the find and remove operation is done atomically
+   *
    * @param jxQuery  JxPath query string
    * @param entityClass  class that determines the collection to use
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
@@ -406,14 +406,14 @@ public interface JsonDBOperations {
    * @return the removed object or null
    */
   <T> T findAndRemove(String jxQuery, Class<T> entityClass);
-  
+
   /**
-   * Map the results of the jxQuery on the collection for the entity type to a single 
+   * Map the results of the jxQuery on the collection for the entity type to a single
    * instance of an object of the specified type. The first document that matches the query
    * is returned and also removed from the collection in the database.
-   * 
-   * Both the find and remove operation is done a single atomic way
-   * 
+   *
+   * Both the find and remove operation is done atomically
+   *
    * @param jxQuery  JxPath query string
    * @param collectionName  name of the collection to update the objects from
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
@@ -421,9 +421,11 @@ public interface JsonDBOperations {
    * @return the removed object or null
    */
   <T> T findAndRemove(String jxQuery, String collectionName);
-  
+
   /**
    * Returns and removes all documents matching the given query form the collection used to store the entityClass.
+   *
+   * Both the find and remove operation is done atomically
    *
    * @param jxQuery  JxPath query string
    * @param entityClass  class that determines the collection to use
@@ -432,9 +434,11 @@ public interface JsonDBOperations {
    * @return the list of removed objects or null
    */
   <T> List<T> findAllAndRemove(String jxQuery, Class<T> entityClass);
-  
+
   /**
    * Returns and removes all documents matching the given query form the collection used to store the entityClass.
+   *
+   * Both the find and remove operation is done atomically
    *
    * @param jxQuery  JxPath query string
    * @param collectionName  name of the collection to update the objects from

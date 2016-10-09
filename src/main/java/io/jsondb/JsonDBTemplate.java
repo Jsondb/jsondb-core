@@ -817,6 +817,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       boolean substractResult = jw.removeFromJsonFile(collection, id);
       if(substractResult) {
         T objectRemoved = collection.remove(id);
+        // Don't need to clone it, this object no more exists in the collection
         return objectRemoved;
       } else {
         return null;
@@ -877,6 +878,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       if(substractResult) {
         removedObjects = new ArrayList<T>();
         for (Object id : removeIds) {
+          // Don't need to clone it, this object no more exists in the collection
           removedObjects.add(collection.remove(id));
         }
       }
@@ -1068,7 +1070,7 @@ public class JsonDBTemplate implements JsonDBOperations {
         if (!collection.containsKey(idToRemove)) { //This will never happen since the object was located based of jxQuery
           throw new InvalidJsonDbApiUsageException(String.format("Objects with Id %s not found in collection %s", idToRemove, collectionName));
         }
-        
+
         JsonWriter jw;
         try {
           jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
@@ -1079,6 +1081,7 @@ public class JsonDBTemplate implements JsonDBOperations {
         boolean substractResult = jw.removeFromJsonFile(collection, idToRemove);
         if (substractResult) {
           T objectRemoved = collection.remove(idToRemove);
+          // Don't need to clone it, this object no more exists in the collection
           return objectRemoved;
         } else {
           logger.error("Unexpected, Failed to substract the object");
@@ -1103,11 +1106,53 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> List<T> findAllAndRemove(String jxQuery, String collectionName) {
-    List<T> toRemove = find(jxQuery, collectionName);
-    if (null == toRemove) {
-      return null;
-    } else {
-      return remove(toRemove, collectionName);
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if(null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+    }
+    cmd.getCollectionLock().writeLock().lock();
+    try {
+      @SuppressWarnings("unchecked")
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+
+      JXPathContext context = contextsRef.get().get(collectionName);
+      @SuppressWarnings("unchecked")
+      Iterator<T> resultItr = context.iterate(jxQuery);
+      Set<Object> removeIds = new HashSet<Object>();
+      while (resultItr.hasNext()) {
+        T objectToRemove = resultItr.next();
+        Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
+        removeIds.add(idToRemove);
+      }
+
+      if(removeIds.size() < 1) {
+        return null;
+      }
+
+      JsonWriter jw;
+      try {
+        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+      } catch (IOException ioe) {
+        logger.error("Failed to obtain writer for " + collectionName, ioe);
+        throw new JsonDBException("Failed to save " + collectionName, ioe);
+      }
+      boolean substractResult = jw.removeFromJsonFile(collection, removeIds);
+
+      List<T> removedObjects = null;
+      if(substractResult) {
+        removedObjects = new ArrayList<T>();
+        for (Object id : removeIds) {
+          // Don't need to clone it, this object no more exists in the collection
+          removedObjects.add(collection.remove(id));
+        }
+      }
+      return removedObjects;
+
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
     }
   }
 
