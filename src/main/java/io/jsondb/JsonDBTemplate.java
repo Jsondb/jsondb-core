@@ -460,6 +460,9 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> List<T> find(String jxQuery, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
+    if(null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+    }
     cmd.getCollectionLock().readLock().lock();
     try {
       JXPathContext context = contextsRef.get().get(collectionName);
@@ -1040,15 +1043,51 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> T findAndRemove(String jxQuery, String collectionName) {
-    List<T> toRemoveList = find(jxQuery, collectionName);
-    T objectRemoved = null;
-    if (null != toRemoveList) {
-      T toRemove = toRemoveList.get(0);
-      if (null != toRemove) {
-        objectRemoved = remove(toRemove, collectionName);
-      }
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if(null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
-    return objectRemoved;
+    cmd.getCollectionLock().writeLock().lock();
+    try {
+      @SuppressWarnings("unchecked")
+      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+      if (null == collection) {
+        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+      }
+
+      JXPathContext context = contextsRef.get().get(collectionName);
+      @SuppressWarnings("unchecked")
+      Iterator<T> resultItr = context.iterate(jxQuery);
+      T objectToRemove = null;
+      while (resultItr.hasNext()) {
+        objectToRemove = resultItr.next();
+        break; // Use only the first element we find.
+      }
+      if (null != objectToRemove) {
+        Object idToRemove = Util.getIdForEntity(objectToRemove, cmd.getIdAnnotatedFieldGetterMethod());
+        if (!collection.containsKey(idToRemove)) { //This will never happen since the object was located based of jxQuery
+          throw new InvalidJsonDbApiUsageException(String.format("Objects with Id %s not found in collection %s", idToRemove, collectionName));
+        }
+        
+        JsonWriter jw;
+        try {
+          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+        } catch (IOException ioe) {
+          logger.error("Failed to obtain writer for " + collectionName, ioe);
+          throw new JsonDBException("Failed to save " + collectionName, ioe);
+        }
+        boolean substractResult = jw.removeFromJsonFile(collection, idToRemove);
+        if (substractResult) {
+          T objectRemoved = collection.remove(idToRemove);
+          return objectRemoved;
+        } else {
+          logger.error("Unexpected, Failed to substract the object");
+        }
+      }
+      return null; //Either the jxQuery found nothing or actual FileIO failed to substract it.
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
+    }
   }
 
   /* (non-Javadoc)

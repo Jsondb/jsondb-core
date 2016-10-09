@@ -395,7 +395,9 @@ public interface JsonDBOperations {
   /**
    * Map the results of the jxQuery on the collection for the entity type to a single 
    * instance of an object of the specified type. The first document that matches the query
-   * is returned and also removed from the collection in the database. 
+   * is returned and also removed from the collection in the database.
+   * 
+   * Both the find and remove operation is done a single atomic way
    * 
    * @param jxQuery  JxPath query string
    * @param entityClass  class that determines the collection to use
@@ -408,7 +410,9 @@ public interface JsonDBOperations {
   /**
    * Map the results of the jxQuery on the collection for the entity type to a single 
    * instance of an object of the specified type. The first document that matches the query
-   * is returned and also removed from the collection in the database. 
+   * is returned and also removed from the collection in the database.
+   * 
+   * Both the find and remove operation is done a single atomic way
    * 
    * @param jxQuery  JxPath query string
    * @param collectionName  name of the collection to update the objects from
