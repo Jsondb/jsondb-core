@@ -122,11 +122,13 @@ public class RemoveTests {
     Instance instance = new Instance();
     instance.setId("05");
 
-    jsonDBTemplate.remove(instance, Instance.class);
+    Instance removedObject = jsonDBTemplate.remove(instance, Instance.class);
 
     instances = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(instances);
     assertEquals(size-1, instances.size());
+    assertNotNull(removedObject);
+    assertEquals("05", removedObject.getId());
   }
 
   /**
@@ -144,10 +146,12 @@ public class RemoveTests {
       batch.add(e);
     }
 
-    jsonDBTemplate.remove(batch, Instance.class);
+    List<Instance> removedObjects = jsonDBTemplate.remove(batch, Instance.class);
 
     eventClasses = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(eventClasses);
     assertEquals(size-2, eventClasses.size());
+    assertNotNull(removedObjects);
+    assertEquals(2, removedObjects.size());
   }
 }
