@@ -1038,6 +1038,9 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> T findAndRemove(String jxQuery, String collectionName) {
+    if (null == jxQuery) {
+      throw new InvalidJsonDbApiUsageException("Query string cannot be null.");
+    }
     CollectionMetaData cmd = cmdMap.get(collectionName);
     if(null == cmd) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
@@ -1178,7 +1181,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       Iterator<T> resultItr = context.iterate(jxQuery);
       T objectToModify = null;
       T clonedModifiedObject = null;
-      
+
       while (resultItr.hasNext()) {
         objectToModify = resultItr.next();
         break; // Use only the first element we find.
@@ -1198,7 +1201,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             return null;
           }
         }
-        
+
         Object idToModify = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
         JsonWriter jw = null;
         try {
@@ -1224,7 +1227,7 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
-  
+
   /* (non-Javadoc)
    * @see io.jsondb.JsonDBOperations#findAllAndModify(java.lang.String, io.jsondb.query.Update, java.lang.Class)
    */
@@ -1253,11 +1256,11 @@ public class JsonDBTemplate implements JsonDBOperations {
       JXPathContext context = contextsRef.get().get(collectionName);
       Iterator<T> resultItr = context.iterate(jxQuery);
       Map<Object, T> clonedModifiedObjects = new HashMap<Object, T>();
-      
+
       while (resultItr.hasNext()) {
         T objectToModify = resultItr.next();
         T clonedModifiedObject = (T) Util.deepCopy(objectToModify);
-        
+
         for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
           Object newValue = Util.deepCopy(entry.getValue());
           if(encrypted && cmd.hasSecret() && cmd.isSecretField(entry.getKey())){
@@ -1273,7 +1276,7 @@ public class JsonDBTemplate implements JsonDBOperations {
         Object id = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
         clonedModifiedObjects.put(id, clonedModifiedObject);
       }
-      
+
       JsonWriter jw = null;
       try {
         jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));

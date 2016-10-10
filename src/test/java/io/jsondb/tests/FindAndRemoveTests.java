@@ -22,6 +22,7 @@ package io.jsondb.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -44,13 +45,10 @@ import io.jsondb.testmodel.Instance;
 import io.jsondb.testmodel.Site;
 
 /**
- * Junit tests for the remove() apis
- *
- * @version 1.0 08-Oct-2016
+ * @version 1.0 11-Oct-2016
  */
-public class RemoveTests {
-
-  private String dbFilesLocation = "src/test/resources/dbfiles/removeTests";
+public class FindAndRemoveTests {
+  private String dbFilesLocation = "src/test/resources/dbfiles/findAndRemoveTests";
   private File dbFilesFolder = new File(dbFilesLocation);
   private File instancesJson = new File(dbFilesFolder, "instances.json");
 
@@ -77,13 +75,10 @@ public class RemoveTests {
    */
   @Test
   public void testRemove_NonExistingObject() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Objects with Id 000012 not found in collection instances");
+    String jxQuery = String.format("/.[id='%s']", "12");
+    Instance i = jsonDBTemplate.findAndRemove(jxQuery, Instance.class);
 
-    Instance instance = new Instance();
-    instance.setId("000012");
-
-    jsonDBTemplate.remove(instance, Instance.class);
+    assertNull(i);
   }
 
   /**
@@ -92,9 +87,9 @@ public class RemoveTests {
   @Test
   public void testRemove_NullObject() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Null Object batch cannot be removed from DB");
+    expectedException.expectMessage("Query string cannot be null.");
 
-    jsonDBTemplate.remove(null, Instance.class);
+    jsonDBTemplate.findAndRemove(null, Instance.class);
   }
 
   /**
@@ -105,10 +100,8 @@ public class RemoveTests {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
 
-    Site s = new Site();
-    s.setId("000012");
-
-    jsonDBTemplate.remove(s, Site.class);
+    String jxQuery = String.format("/.[id='%s']", "12");
+    jsonDBTemplate.findAndRemove(jxQuery, Site.class);
   }
 
   /**
@@ -119,10 +112,8 @@ public class RemoveTests {
     List<Instance> instances = jsonDBTemplate.getCollection(Instance.class);
     int size = instances.size();
 
-    Instance instance = new Instance();
-    instance.setId("05");
-
-    Instance removedObject = jsonDBTemplate.remove(instance, Instance.class);
+    String jxQuery = String.format("/.[id='%s']", "05");
+    Instance removedObject = jsonDBTemplate.findAndRemove(jxQuery, Instance.class);
 
     instances = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(instances);
@@ -135,18 +126,31 @@ public class RemoveTests {
    * Test to remove a batch of objects from collection
    */
   @Test
+  public void testRemove_OneofManyObjects() {
+    List<Instance> instances = jsonDBTemplate.getCollection(Instance.class);
+    int size = instances.size();
+
+    String jxQuery = String.format("/.[id>'%s']", "04");
+
+    Instance removedObjects = jsonDBTemplate.findAndRemove(jxQuery, Instance.class);
+
+    instances = jsonDBTemplate.getCollection(Instance.class);
+    assertNotNull(instances);
+    assertEquals(size-1, instances.size());
+    assertNotNull(removedObjects);
+  }
+
+  /**
+   * Test to remove a batch of objects from collection
+   */
+  @Test
   public void testRemove_BatchOfObjects() {
     List<Instance> instances = jsonDBTemplate.getCollection(Instance.class);
     int size = instances.size();
 
-    List<Instance> batch = new ArrayList<Instance>();
-    for (int i=1; i<3; i++) {
-      Instance e = new Instance();
-      e.setId(String.format("%02d", i));
-      batch.add(e);
-    }
+    String jxQuery = String.format("/.[id>'%s']", "04");
 
-    List<Instance> removedObjects = jsonDBTemplate.remove(batch, Instance.class);
+    List<Instance> removedObjects = jsonDBTemplate.findAllAndRemove(jxQuery, Instance.class);
 
     instances = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(instances);
