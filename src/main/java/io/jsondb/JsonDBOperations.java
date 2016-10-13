@@ -478,6 +478,15 @@ public interface JsonDBOperations {
 
   <T> List<T> findAllAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> List<T> findAllAndModify(String jxQuery, Update update, String collectionName);
+  
+  /**
+   * A method that allows changing the encryption key used.
+   *
+   * @param oldKey Old key used for encryption
+   * @param newKey New key to be used for encryption
+   */
+  void changeEncryptionKey(String oldKey, String newKey);
+  
   /**
    * This method backs up JSONDB collections to specified backup path
    *

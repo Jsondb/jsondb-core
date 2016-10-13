@@ -1301,6 +1301,15 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
 
   /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#changeEncryptionKey(java.lang.String, java.lang.String)
+   */
+  @Override
+  public void changeEncryptionKey(String oldKey, String newKey) {
+    // TODO Auto-generated method stub
+    
+  }
+
+  /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#backup(java.lang.String)
    */
   @Override
