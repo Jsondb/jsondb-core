@@ -1294,7 +1294,12 @@ public class JsonDBTemplate implements JsonDBOperations {
        //Clone it once more because we want to disconnect it from the in-memory objects before returning.
        List<T> returnObjects = new ArrayList<T>();
        for (T obj : clonedModifiedObjects.values()) {
-         returnObjects.add(obj);
+         //Clone it once more because we want to disconnect it from the in-memory objects before returning.
+         T returnObj = (T) Util.deepCopy(obj);
+         if(encrypted && cmd.hasSecret() && null!= returnObj){
+           CryptoUtil.decryptFields(returnObj, cmd, dbConfig.getCipher());
+         }
+         returnObjects.add(returnObj);
        }
        return returnObjects;
       }
@@ -1310,7 +1315,7 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public void changeEncryptionKey(String oldKey, String newKey) {
     // TODO Auto-generated method stub
-    
+
   }
 
   /* (non-Javadoc)
