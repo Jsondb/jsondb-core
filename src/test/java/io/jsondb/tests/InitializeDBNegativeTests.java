@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.Set;
 
 import org.junit.After;
@@ -34,9 +35,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.google.common.io.Files;
+
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
+import io.jsondb.crypto.DefaultAESCBCCipher;
+import io.jsondb.crypto.ICipher;
 
 /**
  * Unit tests that cover all aspects of DB initialization
@@ -46,14 +51,15 @@ import io.jsondb.Util;
  */
 public class InitializeDBNegativeTests {
 
-  private String dbFilesLocation = "src/test/resources/dbfiles/emptyDBInitializationTests";
+  private String dbFilesLocation = "src/test/resources/dbfiles/dbInitializationTests";
   private File dbFilesFolder = new File(dbFilesLocation);
-
+  private File instancesJson = new File(dbFilesFolder, "instances.json");
+  
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, GeneralSecurityException {
     dbFilesFolder.mkdir();
   }
 
@@ -74,7 +80,7 @@ public class InitializeDBNegativeTests {
   }
 
   /**
-   * A test to see if JsonDB will initialize whe a non existing directory is passed
+   * A test to see if JsonDB will initialize when a non existing directory is passed
    */
   @Test
   public void testMissingDBLocationInitialization_1() {
@@ -104,5 +110,18 @@ public class InitializeDBNegativeTests {
     expectedException.expectMessage("Specified DbFiles directory is actually a file cannot use it as a directory");
 
     new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.testmodel");
+  }
+  
+  @Test
+  public void testDBInitializationforMissingFile() throws IOException, GeneralSecurityException {
+    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
+    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    
+    assertTrue(jsonDBTemplate.collectionExists("instances"));
+    
+    instancesJson.delete();
+    jsonDBTemplate.reloadCollection("instances");
+    assertTrue(!jsonDBTemplate.collectionExists("instances"));
   }
 }

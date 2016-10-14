@@ -161,6 +161,10 @@ public class JsonDBTemplate implements JsonDBOperations {
           JXPathContext newContext = JXPathContext.newContext(collection.values());
           contextsRef.get().put(collectionName, newContext);
           collectionsRef.get().put(collectionName, collection);
+        } else {
+          //Since this is a reload attempt its possible the .json files have disappeared in the interim.
+          contextsRef.get().remove(collectionName);
+          collectionsRef.get().remove(collectionName);
         }
       }
     } finally {
