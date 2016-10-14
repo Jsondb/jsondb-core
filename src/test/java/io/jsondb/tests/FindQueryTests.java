@@ -144,45 +144,6 @@ public class FindQueryTests {
   }
 
   /**
-   * test to find a document with a existing id.
-   */
-  @Test
-  public void testFindById_ForExistingId() {
-    Instance instance = jsonDBTemplate.findById("01", Instance.class);
-    assertNotNull(instance);
-    assertEquals(instance.getId(), "01");
-  }
-
-  /**
-   * test to find a document with a non-existent id.
-   */
-  @Test
-  public void testFindById_ForNonExistentId() {
-    Instance instance = jsonDBTemplate.findById("00", Instance.class);
-    assertNull(instance);
-  }
-
-  /**
-   * test to find a document formEntity type which does not have @Document annotation
-   */
-  @Test
-  public void testFindById_NonAnotatedClass() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Entity 'NonAnotatedClass' is not annotated with annotation @Document");
-    jsonDBTemplate.findById("000000", NonAnotatedClass.class);
-  }
-
-  /**
-   * test to find a document for a unknown collection name
-   */
-  @Test
-  public void testFindById_UnknownCollectionName() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Collection by name 'SomeCollection' not found. Create collection first");
-    jsonDBTemplate.findById("000000", "SomeCollection");
-  }
-
-  /**
    * test to find a single document from the complete collection.
    */
   @Test
