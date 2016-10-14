@@ -39,7 +39,7 @@ import com.google.common.io.Files;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
-import io.jsondb.crypto.DefaultAESCipher;
+import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.testmodel.Instance;
 import io.jsondb.testmodel.Site;
@@ -65,7 +65,7 @@ public class InsertTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    ICipher cipher = new DefaultAESCipher("3661d902f427b4da");
+    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
     jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
   }
 
@@ -270,7 +270,7 @@ public class InsertTests {
     Instance instance = new Instance();
     instance.setHostname("ec2-54-191-11");
     //Private key is encrypted form of: b87eb02f5dd7e5232d7b0fc30a5015e4
-    instance.setPrivateKey("HzBhwnu5WUnFb30eu6EAgMBkpoqQg4RMp5bvAp3cYXbr+74zBv1vY/kEriy0VDES");
+    instance.setPrivateKey("Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop");
     instance.setPublicKey("d3aa045f71bf4d1dffd2c5f485a4bc1d");
 
     jsonDBTemplate.insert(instance);

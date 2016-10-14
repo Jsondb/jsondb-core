@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.After;
@@ -39,7 +38,7 @@ import com.google.common.io.Files;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
-import io.jsondb.crypto.DefaultAESCipher;
+import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.testmodel.Instance;
 import io.jsondb.testmodel.Site;
@@ -61,7 +60,7 @@ public class FindAndRemoveTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    ICipher cipher = new DefaultAESCipher("3661d902f427b4da");
+    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
     jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
   }
 

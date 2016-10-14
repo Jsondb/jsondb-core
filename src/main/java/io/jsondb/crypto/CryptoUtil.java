@@ -20,8 +20,17 @@
  */
 package io.jsondb.crypto;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+import java.util.Base64;
+
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,5 +105,46 @@ public class CryptoUtil {
         logger.error("Failed to invoke method for a secretAnnotated field, the method threw a exception", e);
       }
     }
+  }
+  
+  /**
+   * Utility method to help generate a strong 128 bit Key to be used for the DefaultAESCBCCipher.
+   * 
+   * Note: This function is only provided as a utility to generate strong password it should
+   *       be used statically to generate a key and then the key should be captured and used in your program.
+   *
+   * This function defaults to using 65536 iterations and 128 bits for key size. If you wish to use 256 bits key size
+   * then ensure that you have Java Cryptography Extension (JCE) Unlimited Strength Jurisdiction Policy installed 
+   * and change the last argument to {@link javax.crypto.spec.PBEKeySpec} below to 256
+   *
+   * @param password A password which acts as a seed for generation of the key
+   * @param salt A salt used in combination with the password for the generation of the key
+   * 
+   * @return A Base64 Encoded string representing the 128 bit key
+   * 
+   * @throws NoSuchAlgorithmException if the KeyFactory algorithm is not found in available crypto providers
+   * @throws UnsupportedEncodingException if the char encoding of the salt is not known.
+   * @throws InvalidKeySpecException invalid generated key
+   */
+  public static String generate128BitKey(String password, String salt) 
+      throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeySpecException {
+
+    SecretKeyFactory factory;
+    try {
+      factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+      throw e;
+    }
+    KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(), 65536, 128);
+    SecretKey key;
+    try {
+      key = factory.generateSecret(spec);
+    } catch (InvalidKeySpecException e) {
+      e.printStackTrace();
+      throw e;
+    }
+    byte[] keybyte = key.getEncoded();
+    return Base64.getEncoder().encodeToString(keybyte);
   }
 }

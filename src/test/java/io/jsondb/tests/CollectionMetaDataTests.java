@@ -39,7 +39,7 @@ import com.google.common.io.Files;
 import io.jsondb.CollectionMetaData;
 import io.jsondb.JsonDBConfig;
 import io.jsondb.Util;
-import io.jsondb.crypto.DefaultAESCipher;
+import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.testmodel.SecureVolume;
 import io.jsondb.testmodel.Volume;
@@ -59,7 +59,7 @@ public class CollectionMetaDataTests {
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
 
     try {
-      cipher = new DefaultAESCipher("3661d902f427b4da");
+      cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
     } catch (GeneralSecurityException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
