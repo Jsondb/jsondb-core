@@ -51,6 +51,8 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 
 import io.jsondb.crypto.CryptoUtil;
 import io.jsondb.crypto.ICipher;
+import io.jsondb.events.CollectionFileChangeListener;
+import io.jsondb.events.EventListenerList;
 import io.jsondb.io.JsonFileLockException;
 import io.jsondb.io.JsonReader;
 import io.jsondb.io.JsonWriter;
@@ -66,6 +68,7 @@ public class JsonDBTemplate implements JsonDBOperations {
   private JsonDBConfig dbConfig = null;
   private final boolean encrypted;
   private File lockFilesLocation;
+  private EventListenerList eventListenerList;
 
   private Map<String, CollectionMetaData> cmdMap;
   private AtomicReference<Map<String, File>> fileObjectsRef = new AtomicReference<Map<String, File>>(new ConcurrentHashMap<String, File>());
@@ -88,6 +91,7 @@ public class JsonDBTemplate implements JsonDBOperations {
     dbConfig = new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator);
     this.encrypted = true;
     initialize();
+    eventListenerList = new EventListenerList(dbConfig, cmdMap);
   }
 
   private void initialize(){
@@ -114,7 +118,7 @@ public class JsonDBTemplate implements JsonDBOperations {
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        shutdown();
+        eventListenerList.shutdown();
       }
     });
   }
@@ -228,21 +232,11 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
 
   /* (non-Javadoc)
-   * @see org.jsondb.JsonDBOperations#shutdown()
-   */
-  @Override
-  public void shutdown() {
-    // TODO Auto-generated method stub
-
-  }
-
-  /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#addCollectionFileChangeListener(org.jsondb.CollectionFileChangeListener)
    */
   @Override
   public void addCollectionFileChangeListener(CollectionFileChangeListener listener) {
-    // TODO Auto-generated method stub
-
+    eventListenerList.addCollectionFileChangeListener(listener);
   }
 
   /* (non-Javadoc)
@@ -250,8 +244,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public void removeCollectionFileChangeListener(CollectionFileChangeListener listener) {
-    // TODO Auto-generated method stub
-
+    eventListenerList.removeCollectionFileChangeListener(listener);
   }
 
   /* (non-Javadoc)

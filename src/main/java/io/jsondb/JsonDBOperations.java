@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import io.jsondb.events.CollectionFileChangeListener;
 import io.jsondb.query.CollectionSchemaUpdate;
 import io.jsondb.query.Update;
 
@@ -47,11 +48,6 @@ public interface JsonDBOperations {
    * @param collectionName name of the collection to reload
    */
   void reloadCollection(String collectionName);
-
-  /**
-   * Shuts down all event system in Json DB
-   */
-  void shutdown();
 
   /**
    * adds a CollectionFileChangeListener to db.
@@ -461,7 +457,7 @@ public interface JsonDBOperations {
    * @return first object that was modified or null
    */
   <T> T findAndModify(String jxQuery, Update update, Class<T> entityClass);
-  
+
   /**
    * Triggers findAndModify to apply provided Update on the first document matching Criteria of given Query.
    *
@@ -478,7 +474,7 @@ public interface JsonDBOperations {
 
   <T> List<T> findAllAndModify(String jxQuery, Update update, Class<T> entityClass);
   <T> List<T> findAllAndModify(String jxQuery, Update update, String collectionName);
-  
+
   /**
    * A method that allows changing the encryption key used.
    *
@@ -486,7 +482,7 @@ public interface JsonDBOperations {
    * @param newKey New key to be used for encryption
    */
   void changeEncryptionKey(String oldKey, String newKey);
-  
+
   /**
    * This method backs up JSONDB collections to specified backup path
    *
