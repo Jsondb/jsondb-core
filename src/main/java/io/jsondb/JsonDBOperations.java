@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import io.jsondb.crypto.ICipher;
 import io.jsondb.events.CollectionFileChangeListener;
 import io.jsondb.query.CollectionSchemaUpdate;
 import io.jsondb.query.Update;
@@ -476,12 +477,18 @@ public interface JsonDBOperations {
   <T> List<T> findAllAndModify(String jxQuery, Update update, String collectionName);
 
   /**
-   * A method that allows changing the encryption key used.
+   * A method that allows changing the encryption algorithm and or encryption key used.
    *
-   * @param oldKey Old key used for encryption
-   * @param newKey New key to be used for encryption
+   * This operation could take time. If for some reason the operation crashes in between
+   * the database will be left in a inconsistent state, So it would be better to back up
+   * the database before you carry out this operation
+   * It will change all the json files that have any keys that are secret
+   *
+   * @param newCipher a new cipher to use, the algorithm may be same and just the key may be new
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
    */
-  void changeEncryptionKey(String oldKey, String newKey);
+  <T> void changeEncryption(ICipher newCipher);
 
   /**
    * This method backs up JSONDB collections to specified backup path

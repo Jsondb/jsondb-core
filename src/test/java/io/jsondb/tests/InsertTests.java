@@ -270,7 +270,8 @@ public class InsertTests {
     Instance instance = new Instance();
     instance.setHostname("ec2-54-191-11");
     //Private key is encrypted form of: b87eb02f5dd7e5232d7b0fc30a5015e4
-    instance.setPrivateKey("Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop");
+    //Inserting the below private key should result in "Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop"
+    instance.setPrivateKey("b87eb02f5dd7e5232d7b0fc30a5015e4");
     instance.setPublicKey("d3aa045f71bf4d1dffd2c5f485a4bc1d");
 
     jsonDBTemplate.insert(instance);

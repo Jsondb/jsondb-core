@@ -1302,13 +1302,62 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
-  /* (non-Javadoc)
-   * @see io.jsondb.JsonDBOperations#changeEncryptionKey(java.lang.String, java.lang.String)
-   */
-  @Override
-  public void changeEncryptionKey(String oldKey, String newKey) {
-    // TODO Auto-generated method stub
 
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#changeEncryption(io.jsondb.crypto.ICipher)
+   */
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> void changeEncryption(ICipher newCipher) {
+    if (!encrypted) {
+      throw new InvalidJsonDbApiUsageException("DB is not encrypted, nothing to change for EncryptionKey");
+    }
+
+    for (Entry<String, Map<Object, ?>> entry : collectionsRef.get().entrySet()) {
+      CollectionMetaData cmd = cmdMap.get(entry.getKey());
+      if (cmd.hasSecret()) {
+        cmd.getCollectionLock().writeLock().lock();
+      }
+    }
+    try {
+      for (Entry<String, Map<Object, ?>> entry : collectionsRef.get().entrySet()) {
+        String collectionName = entry.getKey();
+        Map<Object, T> collection = (Map<Object, T>) entry.getValue();
+
+        CollectionMetaData cmd = cmdMap.get(collectionName);
+        if (cmd.hasSecret()) {
+          Map<Object, T> reCryptedObjects = new LinkedHashMap<Object, T>();
+          for (Entry<Object, T> object : collection.entrySet()) {
+            T clonedObject = (T) Util.deepCopy(object.getValue());
+            CryptoUtil.decryptFields(clonedObject, cmd, dbConfig.getCipher());
+            CryptoUtil.encryptFields(clonedObject, cmd, newCipher);
+            //We will reuse the Id in the previous collection, should hopefully not cause any issues
+            reCryptedObjects.put(object.getKey(), clonedObject);
+          }
+          JsonWriter jw = null;
+          try {
+            jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+          } catch (IOException ioe) {
+            logger.error("Failed to obtain writer for " + collectionName, ioe);
+            throw new JsonDBException("Failed to save " + collectionName, ioe);
+          }
+          boolean updateResult = jw.updateInJsonFile(collection, reCryptedObjects);
+          if (!updateResult) {
+            throw new JsonDBException("Failed to write re-crypted collection data to .json files, database might have become insconsistent");
+          }
+          collection.putAll(reCryptedObjects);
+        }
+      }
+      dbConfig.setCipher(newCipher);
+    } finally {
+      for (Entry<String, Map<Object, ?>> entry : collectionsRef.get().entrySet()) {
+        CollectionMetaData cmd = cmdMap.get(entry.getKey());
+        if (cmd.hasSecret()) {
+          cmd.getCollectionLock().writeLock().unlock();
+        }
+      }
+    }
   }
 
   /* (non-Javadoc)
