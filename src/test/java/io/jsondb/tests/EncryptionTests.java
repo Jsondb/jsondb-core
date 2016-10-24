@@ -43,7 +43,7 @@ import io.jsondb.testmodel.Instance;
  * Test for the encryption functionality
  * @version 1.0 22-Oct-2016
  */
-public class EncryptionTest {
+public class EncryptionTests {
   private String dbFilesLocation = "src/test/resources/dbfiles/encryptionTests";
   private File dbFilesFolder = new File(dbFilesLocation);
   private File instancesJson = new File(dbFilesFolder, "instances.json");
