@@ -129,21 +129,10 @@ public class CryptoUtil {
   public static String generate128BitKey(String password, String salt) 
       throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidKeySpecException {
 
-    SecretKeyFactory factory;
-    try {
-      factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
-      throw e;
-    }
+    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+    
     KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(), 65536, 128);
-    SecretKey key;
-    try {
-      key = factory.generateSecret(spec);
-    } catch (InvalidKeySpecException e) {
-      e.printStackTrace();
-      throw e;
-    }
+    SecretKey key = factory.generateSecret(spec);
     byte[] keybyte = key.getEncoded();
     return Base64.getEncoder().encodeToString(keybyte);
   }
