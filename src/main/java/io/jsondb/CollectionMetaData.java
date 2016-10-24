@@ -182,7 +182,7 @@ public class CollectionMetaData {
     return "set" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
   }
 
-  @SuppressWarnings("unused")
+/*  @SuppressWarnings("unused")
   private String formFieldName(String methodName) {
     if(methodName.startsWith("get") || methodName.startsWith("set")) {
       String fName = methodName.substring(3);
@@ -193,7 +193,7 @@ public class CollectionMetaData {
     }
     //Method has not be named according to Java Bean Specifications. No way to figure out.
     return null;
-  }
+  }*/
 
   /**
    * A utility builder method to scan through the specified package and find all classes/POJOs

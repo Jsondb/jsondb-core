@@ -23,6 +23,7 @@ package io.jsondb.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -73,8 +74,8 @@ public class CollectionMetaDataTests {
 
   @Test
   public void test_MetadataLoad_Simple() {
-    Volume router = new Volume();
-    CollectionMetaData cmd = new CollectionMetaData("routers", router.getClass(), "1.0", null);
+    Volume volume = new Volume();
+    CollectionMetaData cmd = new CollectionMetaData("volumes", volume.getClass(), "1.0", null);
 
     assertEquals("id", cmd.getIdAnnotatedFieldName());
     assertEquals("getId", cmd.getIdAnnotatedFieldGetterMethod().getName());
@@ -93,6 +94,10 @@ public class CollectionMetaDataTests {
     assertFalse(cmd.hasSecret());
 
     assertEquals("1.0", cmd.getSchemaVersion());
+    
+    assertNull(cmd.getActualSchemaVersion());
+    
+    assertEquals("volumes", cmd.getCollectionName());
   }
 
   @Test
