@@ -31,13 +31,7 @@ import io.jsondb.query.ddl.CollectionSchemaUpdate.Type;
  * @version 1.0 21 Aug 2016
  */
 public class DeleteOperation extends AbstractOperation {
-  private String newName;
-
   public DeleteOperation() {
     this.operationType = Type.DELETE;
-  }
-
-  public String getNewName() {
-    return newName;
   }
 }

@@ -35,6 +35,7 @@ import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.query.ddl.AddOperation;
 import io.jsondb.query.ddl.CollectionSchemaUpdate;
+import io.jsondb.query.ddl.DeleteOperation;
 import io.jsondb.query.ddl.IOperation;
 import io.jsondb.testmodel.LoadBalancer;
 
@@ -83,6 +84,33 @@ public class CollectionSchemaUpdateTests {
         "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":\"mac\"}",
         "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":\"mac\"}",
         "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":\"mac\"}"};
+
+    TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+  }
+  
+  @Test
+  public void test_OnlyDeleteField() {
+    assertTrue(jsonDBTemplate.isCollectionReadonly("loadbalancer"));
+
+    IOperation delOperation = new DeleteOperation();
+    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("deletedField", delOperation);
+
+    jsonDBTemplate.updateCollectionSchema(cu, "loadbalancer");
+
+    assertFalse(jsonDBTemplate.isCollectionReadonly("loadbalancer"));
+
+    String[] expectedLinesAtEnd = {
+        "{\"schemaVersion\":\"1.0\"}",
+        "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":null}",
+        "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":null}"};
 
     TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
   }
