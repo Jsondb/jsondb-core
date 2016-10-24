@@ -154,7 +154,7 @@ public class FileChangeAdapterTests {
 
   private class FileDeletedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
-    public void collectionFileModified(String collectionName) {
+    public void collectionFileDeleted(String collectionName) {
       jsonDBTemplate.reLoadDB();
     }
   }
