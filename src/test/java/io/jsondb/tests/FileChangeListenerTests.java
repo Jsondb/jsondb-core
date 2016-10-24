@@ -53,7 +53,7 @@ import io.jsondb.testmodel.Instance;
 /**
  * @version 1.0 24-Oct-2016
  */
-public class EventListenerTests {
+public class FileChangeListenerTests {
 
   private static final long DB_RELOAD_TIMEOUT = 5 * 1000;
   private String dbFilesLocation = "src/test/resources/dbfiles/eventsTests";
@@ -181,7 +181,7 @@ public class EventListenerTests {
 
       @Override
       public void collectionFileDeleted(String collectionName) {
-        jsonDBTemplate.reloadCollection(collectionName);
+        jsonDBTemplate.reLoadDB();
       }
 
       @Override
