@@ -25,7 +25,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.io.File;
-import java.security.GeneralSecurityException;
 
 import org.junit.After;
 import org.junit.Before;
@@ -59,14 +58,7 @@ public class FindByIdTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    ICipher cipher = null;
-    try {
-      cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    } catch (GeneralSecurityException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-
+    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
     jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
   }
 

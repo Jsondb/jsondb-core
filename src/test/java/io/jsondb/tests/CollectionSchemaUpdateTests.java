@@ -1,0 +1,89 @@
+/*
+ * Copyright (c) 2016 Farooq Khan
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package io.jsondb.tests;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.google.common.io.Files;
+
+import io.jsondb.JsonDBTemplate;
+import io.jsondb.Util;
+import io.jsondb.query.ddl.AddOperation;
+import io.jsondb.query.ddl.CollectionSchemaUpdate;
+import io.jsondb.query.ddl.IOperation;
+import io.jsondb.testmodel.LoadBalancer;
+
+/**
+ * @version 1.0 25-Oct-2016
+ */
+public class CollectionSchemaUpdateTests {
+  private String dbFilesLocation = "src/test/resources/dbfiles/collectionUpdateTests";
+  private File dbFilesFolder = new File(dbFilesLocation);
+  private File loadbalancerJson = new File(dbFilesFolder, "loadbalancer.json");
+
+  private JsonDBTemplate jsonDBTemplate = null;
+
+  @Before
+  public void setUp() throws Exception {
+    dbFilesFolder.mkdir();
+    Files.copy(new File("src/test/resources/dbfiles/loadbalancer.json"), loadbalancerJson);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", null, true, null);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    Util.delete(dbFilesFolder);
+  }
+
+  @Test
+  public void test_AddDeleteField() {
+    assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+
+    IOperation addOperation = new AddOperation("mac", false);
+    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("osName", addOperation);
+
+    jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
+
+    assertFalse(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+
+    String[] expectedLinesAtEnd = {
+        "{\"schemaVersion\":\"1.0\"}",
+        "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":\"mac\"}",
+        "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":\"mac\"}"};
+
+    TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+  }
+}
