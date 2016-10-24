@@ -18,14 +18,17 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.jsondb.query;
+package io.jsondb.query.ddl;
 
-import io.jsondb.query.CollectionSchemaUpdate.Type;
+import io.jsondb.query.ddl.CollectionSchemaUpdate.Type;
 
 /**
  * @author Farooq Khan
  * @version 1.0 21 Aug 2016
  */
-public interface IOperation {
-  Type getOperationType();
+public abstract class AbstractOperation implements IOperation {
+  protected Type operationType;
+  public Type getOperationType() {
+    return operationType;
+  }
 }

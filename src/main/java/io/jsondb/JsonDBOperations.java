@@ -26,8 +26,8 @@ import java.util.Set;
 
 import io.jsondb.crypto.ICipher;
 import io.jsondb.events.CollectionFileChangeListener;
-import io.jsondb.query.CollectionSchemaUpdate;
 import io.jsondb.query.Update;
+import io.jsondb.query.ddl.CollectionSchemaUpdate;
 
 /**
  * Interface that defines the methods available in JsonDBTemplate

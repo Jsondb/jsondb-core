@@ -56,8 +56,10 @@ import io.jsondb.events.EventListenerList;
 import io.jsondb.io.JsonFileLockException;
 import io.jsondb.io.JsonReader;
 import io.jsondb.io.JsonWriter;
-import io.jsondb.query.CollectionSchemaUpdate;
 import io.jsondb.query.Update;
+import io.jsondb.query.ddl.AddOperation;
+import io.jsondb.query.ddl.CollectionSchemaUpdate;
+import io.jsondb.query.ddl.DeleteOperation;
 
 /**
  * @version 1.0 25-Sep-2016
@@ -360,7 +362,7 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> void updateCollectionSchema(CollectionSchemaUpdate update, Class<T> entityClass) {
-    // TODO Auto-generated method stub
+    updateCollectionSchema(update, Util.determineCollectionName(entityClass));
   }
 
   /* (non-Javadoc)
@@ -368,7 +370,75 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName) {
-    // TODO Auto-generated method stub
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if (null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Failed to find collection with name '" + collectionName + "'");
+    }
+    boolean reloadCollectionAsSomethingChanged = false;
+    //We only take care of ADD and RENAME, the deletes will be taken care of automatically.
+    if (null != update) {
+      //TODO Add Rename Support
+      
+      Map<String, AddOperation> addOps = update.getAddOperations();
+      if (addOps.size() > 0) {
+        reloadCollectionAsSomethingChanged = true;
+        cmd.getCollectionLock().writeLock().lock();
+    
+        @SuppressWarnings("unchecked")
+        Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+        
+        for(Entry<String, AddOperation> updateEntry: addOps.entrySet()) {
+          AddOperation op = updateEntry.getValue();
+          
+          Object value = null;
+          if (op.isSecret()) {
+            value = dbConfig.getCipher().encrypt((String)op.getDefaultValue());
+          } else {
+            value = op.getDefaultValue();
+          }
+          
+          String fieldName = updateEntry.getKey();
+          Method setterMethod = cmd.getSetterMethodForFieldName(fieldName);
+          for(T object : collection.values()) {
+            Util.setFieldValueForEntity(object, value, setterMethod);
+          }
+        }
+        
+        JsonWriter jw;
+        try {
+          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+        } catch (IOException ioe) {
+          logger.error("Failed to obtain writer for " + collectionName, ioe);
+          throw new JsonDBException("Failed to save " + collectionName, ioe);
+        }
+        jw.reWriteJsonFile(collection.values(), true);
+        cmd.getCollectionLock().writeLock().unlock();
+      }
+      
+      Map<String, DeleteOperation> delOps = update.getDeleteOperations();
+      if ((addOps.size() < 1) && (delOps.size() > 0)) {
+        //There were no ADD operations but there are some DELETE operations so we have to just flush the collection once
+        //This would not have been necessary if there was even 1 ADD operation
+        
+        reloadCollectionAsSomethingChanged = true;
+        cmd.getCollectionLock().writeLock().lock();
+        
+        @SuppressWarnings("unchecked")
+        Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+        JsonWriter jw;
+        try {
+          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+        } catch (IOException ioe) {
+          logger.error("Failed to obtain writer for " + collectionName, ioe);
+          throw new JsonDBException("Failed to save " + collectionName, ioe);
+        }
+        jw.reWriteJsonFile(collection.values(), true);
+        cmd.getCollectionLock().writeLock().unlock();
+      }
+      if (reloadCollectionAsSomethingChanged) {
+        reloadCollection(collectionName);
+      }
+    }
   }
 
   /* (non-Javadoc)

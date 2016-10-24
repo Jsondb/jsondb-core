@@ -18,17 +18,33 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.jsondb.query;
+package io.jsondb.query.ddl;
 
-import io.jsondb.query.CollectionSchemaUpdate.Type;
+import io.jsondb.query.ddl.CollectionSchemaUpdate.Type;
 
 /**
+ * Represents a CollectionUpdate ADD operation type.
+ *
+ * This operation allows for adding a new field to a POJO
+ * 
  * @author Farooq Khan
  * @version 1.0 21 Aug 2016
  */
-public abstract class AbstractOperation implements IOperation {
-  protected Type operationType;
-  public Type getOperationType() {
-    return operationType;
+public class AddOperation extends AbstractOperation {
+  private Object defaultValue;
+  private boolean isSecret;
+
+  public AddOperation(Object defaultValue, boolean isSecret) {
+    this.operationType = Type.ADD;
+    this.defaultValue = defaultValue;
+    this.isSecret = isSecret;
+  }
+
+  public Object getDefaultValue() {
+    return defaultValue;
+  }
+
+  public boolean isSecret() {
+    return isSecret;
   }
 }
