@@ -102,6 +102,13 @@ public class EventListenerList {
     }
   }
 
+  public boolean hasCollectionFileChangeListener() {
+    if ((null != listeners) && (listeners.size() > 0)) {
+      return true;
+    }
+    return false;
+  }
+
   public void shutdown() {
     if (null != listeners && listeners.size() > 0) {
       stopWatcher = true;

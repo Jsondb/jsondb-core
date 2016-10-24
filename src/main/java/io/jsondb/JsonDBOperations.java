@@ -52,7 +52,7 @@ public interface JsonDBOperations {
 
   /**
    * adds a CollectionFileChangeListener to db.
-   * 
+   *
    * NOTE: This method uses FileWatchers and on MAC we get now events for file changes so this does not work on Mac
    * @param listener actual listener to add
    */
@@ -63,6 +63,12 @@ public interface JsonDBOperations {
    * @param listener actual listener to remove
    */
   void removeCollectionFileChangeListener(CollectionFileChangeListener listener);
+
+  /**
+   * a method to check if there are any registered CollectionFileChangeListener
+   * @return true of there are any registered CollectionFileChangeListeners
+   */
+  boolean hasCollectionFileChangeListener();
 
   /**
    * Create an uncapped collection with a name based on the provided entity class.

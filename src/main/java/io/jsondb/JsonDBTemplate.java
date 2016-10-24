@@ -171,7 +171,6 @@ public class JsonDBTemplate implements JsonDBOperations {
           contextsRef.get().put(collectionName, newContext);
           collectionsRef.get().put(collectionName, collection);
         } else {
-          //Since this is a reload attempt its possible the .json files have disappeared in the interim.
           //Since this is a reload attempt its possible the .json files have disappeared in the interim a very rare thing
           contextsRef.get().remove(collectionName);
           collectionsRef.get().remove(collectionName);
@@ -251,6 +250,14 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public void removeCollectionFileChangeListener(CollectionFileChangeListener listener) {
     eventListenerList.removeCollectionFileChangeListener(listener);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#hasCollectionFileChangeListener()
+   */
+  @Override
+  public boolean hasCollectionFileChangeListener() {
+    return eventListenerList.hasCollectionFileChangeListener();
   }
 
   /* (non-Javadoc)

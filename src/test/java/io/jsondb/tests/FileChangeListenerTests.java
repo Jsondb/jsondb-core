@@ -138,12 +138,10 @@ public class FileChangeListenerTests {
 
       @Override
       public void collectionFileDeleted(String collectionName) {
-
       }
 
       @Override
       public void collectionFileAdded(String collectionName) {
-
       }
     });
 
@@ -187,7 +185,6 @@ public class FileChangeListenerTests {
 
       @Override
       public void collectionFileAdded(String collectionName) {
-
       }
     });
 
@@ -201,5 +198,29 @@ public class FileChangeListenerTests {
     }
 
     assertFalse(jsonDBTemplate.collectionExists(PojoWithEnumFields.class));
+  }
+
+  @Test
+  public void testRemoveListener() {
+    assertFalse(jsonDBTemplate.hasCollectionFileChangeListener());
+    CollectionFileChangeListener listener = new CollectionFileChangeListener() {
+      @Override
+      public void collectionFileModified(String collectionName) {
+      }
+
+      @Override
+      public void collectionFileDeleted(String collectionName) {
+      }
+
+      @Override
+      public void collectionFileAdded(String collectionName) {
+      }
+    };
+
+    jsonDBTemplate.addCollectionFileChangeListener(listener);
+    assertTrue(jsonDBTemplate.hasCollectionFileChangeListener());
+
+    jsonDBTemplate.removeCollectionFileChangeListener(listener);
+    assertFalse(jsonDBTemplate.hasCollectionFileChangeListener());
   }
 }
