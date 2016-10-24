@@ -52,6 +52,8 @@ public interface JsonDBOperations {
 
   /**
    * adds a CollectionFileChangeListener to db.
+   * 
+   * NOTE: This method uses FileWatchers and on MAC we get now events for file changes so this does not work on Mac
    * @param listener actual listener to add
    */
   void addCollectionFileChangeListener(CollectionFileChangeListener listener);

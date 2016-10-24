@@ -49,6 +49,7 @@ import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.events.CollectionFileChangeListener;
 import io.jsondb.testmodel.Instance;
+import io.jsondb.testmodel.PojoWithEnumFields;
 
 /**
  * @version 1.0 24-Oct-2016
@@ -171,7 +172,7 @@ public class FileChangeListenerTests {
 
   @Test
   public void testAutoReloadOnCollectionFileDeleted() throws FileNotFoundException {
-    assertTrue(jsonDBTemplate.collectionExists(PojoWithEnumFieldsTest.class));
+    assertTrue(jsonDBTemplate.collectionExists(PojoWithEnumFields.class));
 
     jsonDBTemplate.addCollectionFileChangeListener(new CollectionFileChangeListener() {
 
@@ -199,6 +200,6 @@ public class FileChangeListenerTests {
       fail("Failed to wait for db reload");
     }
 
-    assertFalse(jsonDBTemplate.collectionExists(PojoWithEnumFieldsTest.class));
+    assertFalse(jsonDBTemplate.collectionExists(PojoWithEnumFields.class));
   }
 }
