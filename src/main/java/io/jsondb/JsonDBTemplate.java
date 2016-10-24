@@ -136,6 +136,11 @@ public class JsonDBTemplate implements JsonDBOperations {
       File collectionFile = new File(dbConfig.getDbFilesLocation(), collectionName + ".json");
       if(collectionFile.exists()) {
         reloadCollection(collectionName);
+      } else if (collectionsRef.get().containsKey(collectionName)){
+        //this probably is a reload attempt after a collection .json was deleted.
+        //that is the reason even though the file does not exist a entry into collectionsRef still exists.
+        contextsRef.get().remove(collectionName);
+        collectionsRef.get().remove(collectionName);
       }
     }
   }
@@ -167,6 +172,7 @@ public class JsonDBTemplate implements JsonDBOperations {
           collectionsRef.get().put(collectionName, collection);
         } else {
           //Since this is a reload attempt its possible the .json files have disappeared in the interim.
+          //Since this is a reload attempt its possible the .json files have disappeared in the interim a very rare thing
           contextsRef.get().remove(collectionName);
           collectionsRef.get().remove(collectionName);
         }
