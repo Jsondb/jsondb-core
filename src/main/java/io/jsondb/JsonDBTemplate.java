@@ -472,12 +472,17 @@ public class JsonDBTemplate implements JsonDBOperations {
 
     CollectionMetaData cmd = cmdMap.get(collectionName);
     List<T> newCollection = new ArrayList<T>();
-    for (T document : collection.values()) {
-      Object obj = Util.deepCopy(document);
-      if(encrypted && cmd.hasSecret() && null != obj) {
-        CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+    try {
+      for (T document : collection.values()) {
+        Object obj = Util.deepCopy(document);
+        if(encrypted && cmd.hasSecret() && null != obj) {
+          CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+        }
+        newCollection.add((T) obj);
       }
-      newCollection.add((T) obj);
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     }
     return newCollection;
   }
@@ -556,6 +561,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         newCollection.add((T) obj);
       }
       return newCollection;
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().readLock().unlock();
     }
@@ -596,6 +604,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         }
       }
       return newCollection;
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().readLock().unlock();
     }
@@ -630,6 +641,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         CryptoUtil.decryptFields(obj, collectionMeta, dbConfig.getCipher());
       }
       return (T) obj;
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().readLock().unlock();
     }
@@ -669,6 +683,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         return (T) obj; // Return the first element we find.
       }
       return null;
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().readLock().unlock();
     }
@@ -727,6 +744,9 @@ public class JsonDBTemplate implements JsonDBOperations {
       if(appendResult) {
         collection.put(Util.deepCopy(id), (T) objToSave);
       }
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
     }
@@ -785,6 +805,9 @@ public class JsonDBTemplate implements JsonDBOperations {
       if(appendResult) {
         collection.putAll(newCollection);
       }
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
     }
@@ -843,6 +866,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         T newObject = (T) objToSave;
         collection.put(id, newObject);
       }
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
     }
@@ -1025,6 +1051,9 @@ public class JsonDBTemplate implements JsonDBOperations {
           collection.put(id, newObject);
         }
       }
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
     }
@@ -1100,6 +1129,9 @@ public class JsonDBTemplate implements JsonDBOperations {
          collection.putAll(collectionToUpdate);
         }
       }
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
     }
@@ -1302,6 +1334,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         }
       }
       return null;
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
     }
@@ -1380,6 +1415,9 @@ public class JsonDBTemplate implements JsonDBOperations {
        return returnObjects;
       }
       return null;
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
     }
@@ -1403,9 +1441,10 @@ public class JsonDBTemplate implements JsonDBOperations {
         cmd.getCollectionLock().writeLock().lock();
       }
     }
+    String collectionName = null;
     try {
       for (Entry<String, Map<Object, ?>> entry : collectionsRef.get().entrySet()) {
-        String collectionName = entry.getKey();
+        collectionName = entry.getKey();
         Map<Object, T> collection = (Map<Object, T>) entry.getValue();
 
         CollectionMetaData cmd = cmdMap.get(collectionName);
@@ -1433,6 +1472,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         }
       }
       dbConfig.setCipher(newCipher);
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
+      throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       for (Entry<String, Map<Object, ?>> entry : collectionsRef.get().entrySet()) {
         CollectionMetaData cmd = cmdMap.get(entry.getKey());

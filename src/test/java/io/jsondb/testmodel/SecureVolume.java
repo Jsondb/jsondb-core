@@ -28,7 +28,7 @@ import io.jsondb.annotation.Secret;
  * A test Pojo representing a AWS EC3 Secure Volume
  * @version 1.0 06-Oct-2016
  */
-@Document(collection = "volumes", schemaVersion= "1.0")
+@Document(collection = "securevolumes", schemaVersion= "1.0")
 public class SecureVolume {
   @Id
   private String id;

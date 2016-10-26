@@ -51,8 +51,12 @@ public class CryptoUtil {
    * @param cmd the CollectionMetaData object from which we can obtain the list
    *        containing names of fields which have the @Secret annotation
    * @param cipher the actual cipher implementation to use
+   * @throws IllegalAccessException Error when invoking method for a @Secret annotated field due to permissions
+   * @throws IllegalArgumentException Error when invoking method for a @Secret annotated field due to wrong arguments
+   * @throws InvocationTargetException Error when invoking method for a @Secret annotated field, the method threw a exception
    */
-  public static void encryptFields(Object object, CollectionMetaData cmd, ICipher cipher) {
+  public static void encryptFields(Object object, CollectionMetaData cmd, ICipher cipher) 
+      throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
     for (String secretAnnotatedFieldName: cmd.getSecretAnnotatedFieldNames()) {
       Method getterMethod = cmd.getGetterMethodForFieldName(secretAnnotatedFieldName);
       Method setterMethod = cmd.getSetterMethodForFieldName(secretAnnotatedFieldName);
@@ -66,11 +70,14 @@ public class CryptoUtil {
           setterMethod.invoke(object, encryptedValue);
         }
       } catch (IllegalAccessException e) {
-        logger.error("Failed to invoke method for a secretAnnotated field due to permissions", e);
+        logger.error("Error when invoking method for a @Secret annotated field due to permissions", e);
+        throw e;
       } catch (IllegalArgumentException e) {
-        logger.error("Failed to invoke method for a secretAnnotated field due to wrong arguments", e);
+        logger.error("Error when invoking method for a @Secret annotated field due to wrong arguments", e);
+        throw e;
       } catch (InvocationTargetException e) {
-        logger.error("Failed to invoke method for a secretAnnotated field, the method threw a exception", e);
+        logger.error("Error when invoking method for a @Secret annotated field, the method threw a exception", e);
+        throw e;
       }
     }
   }
@@ -82,8 +89,12 @@ public class CryptoUtil {
    * @param cmd the CollectionMetaData object from which we can obtain the list
    *        containing names of fields which have the @Secret annotation
    * @param cipher the actual cipher implementation to use
+   * @throws IllegalAccessException Error when invoking method for a @Secret annotated field due to permissions
+   * @throws IllegalArgumentException Error when invoking method for a @Secret annotated field due to wrong arguments
+   * @throws InvocationTargetException Error when invoking method for a @Secret annotated field, the method threw a exception
    */
-  public static void decryptFields(Object object, CollectionMetaData cmd, ICipher cipher) {
+  public static void decryptFields(Object object, CollectionMetaData cmd, ICipher cipher) 
+      throws IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 
     for (String secretAnnotatedFieldName: cmd.getSecretAnnotatedFieldNames()) {
       Method getterMethod = cmd.getGetterMethodForFieldName(secretAnnotatedFieldName);
@@ -98,11 +109,14 @@ public class CryptoUtil {
           setterMethod.invoke(object, decryptedValue);
         }
       } catch (IllegalAccessException e) {
-        logger.error("Failed to invoke method for a secretAnnotated field due to permissions", e);
+        logger.error("Error when invoking method for a @Secret annotated field due to permissions", e);
+        throw e;
       } catch (IllegalArgumentException e) {
-        logger.error("Failed to invoke method for a secretAnnotated field due to wrong arguments", e);
+        logger.error("Error when invoking method for a @Secret annotated field due to wrong arguments", e);
+        throw e;
       } catch (InvocationTargetException e) {
-        logger.error("Failed to invoke method for a secretAnnotated field, the method threw a exception", e);
+        logger.error("Error when invoking method for a @Secret annotated field, the method threw a exception", e);
+        throw e;
       }
     }
   }
