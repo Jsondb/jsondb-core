@@ -34,6 +34,7 @@ import org.junit.rules.ExpectedException;
 import com.google.common.io.Files;
 
 import io.jsondb.JsonDBTemplate;
+import io.jsondb.TestUtils;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
