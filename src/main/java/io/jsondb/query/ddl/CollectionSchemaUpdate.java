@@ -89,6 +89,23 @@ public class CollectionSchemaUpdate {
   }
 
   /**
+   * Returns a Map of RENAME operations.
+   * 
+   * @return Map of RENAME operations which have a non-null  default value specified
+   */
+  public Map<String, RenameOperation> getRenameOperations() {
+    Map<String, RenameOperation> renOperations = new TreeMap<String, RenameOperation>();
+    for (Entry<String, IOperation> entry : collectionUpdateData.entrySet()) {
+      String key = entry.getKey();
+      IOperation op = entry.getValue();
+      if (op.getOperationType().equals(Type.RENAME)) {
+        renOperations.put(key, (RenameOperation)op);
+      }
+    }
+    return renOperations;
+  }
+
+  /**
    * Returns a Map of DELETE operations.
    * 
    * @return Map of DELETE operations which have a non-null  default value specified
