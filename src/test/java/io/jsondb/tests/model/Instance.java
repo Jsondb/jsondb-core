@@ -18,27 +18,25 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.jsondb.testmodel;
+package io.jsondb.tests.model;
 
 import io.jsondb.annotation.Document;
 import io.jsondb.annotation.Id;
+import io.jsondb.annotation.Secret;
 
 /**
- * A test POJO to represent a PojoWithEnumFields
- * Used to test that JsonDB can handle POJOs which have Enum fields.
- *
- * @author Farooq Khan
- * @version 1.0 06-Oct-2016
+ * A test Pojo representing a AWS Instance.
+ * @version 1.0 28-Sep-2016
  */
-@Document(collection = "pojowithenumfields", schemaVersion= "1.0")
-public class PojoWithEnumFields {
-  public enum Status {
-    CREATED, COMPLETED, CONSUMED, UPDATED
-  }
-
+@Document(collection = "instances", schemaVersion= "1.0")
+public class Instance {
   @Id
   private String id;
-  private Status status;
+  private String hostname;
+
+  @Secret
+  private String privateKey;
+  private String publicKey;
 
   public String getId() {
     return id;
@@ -46,11 +44,22 @@ public class PojoWithEnumFields {
   public void setId(String id) {
     this.id = id;
   }
-  public Status getStatus() {
-    return status;
+  public String getHostname() {
+    return hostname;
   }
-  public void setStatus(Status status) {
-    this.status = status;
+  public void setHostname(String hostname) {
+    this.hostname = hostname;
+  }
+  public String getPrivateKey() {
+    return privateKey;
+  }
+  public void setPrivateKey(String privateKey) {
+    this.privateKey = privateKey;
+  }
+  public String getPublicKey() {
+    return publicKey;
+  }
+  public void setPublicKey(String publicKey) {
+    this.publicKey = publicKey;
   }
 }
-

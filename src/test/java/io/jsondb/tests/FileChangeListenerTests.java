@@ -44,13 +44,13 @@ import org.junit.rules.ExpectedException;
 import com.google.common.io.Files;
 
 import io.jsondb.JsonDBTemplate;
-import io.jsondb.TestUtils;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.events.CollectionFileChangeListener;
-import io.jsondb.testmodel.Instance;
-import io.jsondb.testmodel.PojoWithEnumFields;
+import io.jsondb.tests.model.Instance;
+import io.jsondb.tests.model.PojoWithEnumFields;
+import io.jsondb.tests.util.TestUtils;
 
 /**
  * @version 1.0 24-Oct-2016
@@ -79,7 +79,7 @@ public class FileChangeListenerTests {
     Files.copy(new File("src/test/resources/dbfiles/pojowithenumfields.json"), pojoWithEnumFieldsJson);
     ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
 
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
   }
 
   @After

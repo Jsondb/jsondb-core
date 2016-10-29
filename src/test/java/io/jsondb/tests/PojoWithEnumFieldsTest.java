@@ -34,8 +34,8 @@ import com.google.common.io.Files;
 
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
-import io.jsondb.testmodel.PojoWithEnumFields;
-import io.jsondb.testmodel.PojoWithEnumFields.Status;
+import io.jsondb.tests.model.PojoWithEnumFields;
+import io.jsondb.tests.model.PojoWithEnumFields.Status;
 
 /**
  * @author Farooq Khan
@@ -52,7 +52,7 @@ public class PojoWithEnumFieldsTest {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/pojowithenumfields.json"), pojoWithEnumFieldsJson);
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel");
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
   }
 
   @After

@@ -33,7 +33,7 @@ import com.google.common.io.Files;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
-import io.jsondb.testmodel.Site;
+import io.jsondb.tests.model.Site;
 
 import org.junit.After;
 import org.junit.Before;
@@ -55,7 +55,7 @@ public class CreateDropCollectionTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel");
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
   }
 
   @After

@@ -39,7 +39,7 @@ import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
-import io.jsondb.testmodel.Instance;
+import io.jsondb.tests.model.Instance;
 
 /**
  * @version 1.0 14-Oct-2016
@@ -59,7 +59,7 @@ public class FindByIdTests {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
     ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
   }
 
   @After

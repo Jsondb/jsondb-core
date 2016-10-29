@@ -42,8 +42,8 @@ import io.jsondb.JsonDBConfig;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
-import io.jsondb.testmodel.SecureVolume;
-import io.jsondb.testmodel.Volume;
+import io.jsondb.tests.model.SecureVolume;
+import io.jsondb.tests.model.Volume;
 
 /**
  * @version 1.0 06-Oct-2016
@@ -58,13 +58,7 @@ public class CollectionMetaDataTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-
-    try {
-      cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    } catch (GeneralSecurityException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
   }
 
   @After
@@ -118,7 +112,7 @@ public class CollectionMetaDataTests {
 
   @Test
   public void test_MetadataLoad_UsingBuilder() {
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.testmodel", cipher, false, null);
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", cipher, false, null);
     Map<String, CollectionMetaData> cmdMap = CollectionMetaData.builder(dbConfig);
     CollectionMetaData cmd = cmdMap.get("instances");
     assertNotNull(cmd);

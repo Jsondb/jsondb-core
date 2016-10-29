@@ -38,13 +38,13 @@ import com.google.common.io.Files;
 
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
-import io.jsondb.TestUtils;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
-import io.jsondb.testmodel.Instance;
-import io.jsondb.testmodel.Site;
-import io.jsondb.testmodel.Volume;
+import io.jsondb.tests.model.Instance;
+import io.jsondb.tests.model.Site;
+import io.jsondb.tests.model.Volume;
+import io.jsondb.tests.util.TestUtils;
 
 /**
  * @version 1.0 08-Oct-2016
@@ -66,7 +66,7 @@ public class UpsertTests {
     dbFilesFolder.mkdir();
     cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
   }
 
   @After

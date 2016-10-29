@@ -73,7 +73,7 @@ public class InitializeDBNegativeTests {
    */
   @Test
   public void testEmptyDBInitialization() {
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel");
+    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
 
     Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
     assertEquals(collectionNames.size(), 0);

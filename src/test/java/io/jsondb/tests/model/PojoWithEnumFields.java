@@ -18,31 +18,39 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.jsondb.testmodel;
+package io.jsondb.tests.model;
 
 import io.jsondb.annotation.Document;
 import io.jsondb.annotation.Id;
 
 /**
- * A test Pojo representing a AWS Site.
- * Used to test JsonDB - createCollection() and dropCollection() operations
+ * A test POJO to represent a PojoWithEnumFields
+ * Used to test that JsonDB can handle POJOs which have Enum fields.
+ *
+ * @author Farooq Khan
  * @version 1.0 06-Oct-2016
  */
-@Document(collection = "sites", schemaVersion= "1.0")
-public class Site {
+@Document(collection = "pojowithenumfields", schemaVersion= "1.0")
+public class PojoWithEnumFields {
+  public enum Status {
+    CREATED, COMPLETED, CONSUMED, UPDATED
+  }
+
   @Id
   private String id;
-  private String location;
+  private Status status;
+
   public String getId() {
     return id;
   }
   public void setId(String id) {
     this.id = id;
   }
-  public String getLocation() {
-    return location;
+  public Status getStatus() {
+    return status;
   }
-  public void setLocation(String location) {
-    this.location = location;
+  public void setStatus(Status status) {
+    this.status = status;
   }
 }
+

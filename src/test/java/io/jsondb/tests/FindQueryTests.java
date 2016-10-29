@@ -42,7 +42,7 @@ import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
-import io.jsondb.testmodel.Instance;
+import io.jsondb.tests.model.Instance;
 
 /**
  * Unit tests that cover all aspects of find queries.
@@ -73,7 +73,7 @@ public class FindQueryTests {
       e.printStackTrace();
     }
 
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
   }
 
   @After

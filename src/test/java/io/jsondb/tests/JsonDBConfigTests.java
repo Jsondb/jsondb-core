@@ -41,7 +41,7 @@ public class JsonDBConfigTests {
 
   @Test
   public void testDbConfig() {
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.testmodel", null, false, null);
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false, null);
 
     assertEquals("src/test/resources/dbfiles/dbConfigTests", dbConfig.getDbFilesLocationString());
     assertEquals(new File("src/test/resources/dbfiles/dbConfigTests"), dbConfig.getDbFilesLocation());

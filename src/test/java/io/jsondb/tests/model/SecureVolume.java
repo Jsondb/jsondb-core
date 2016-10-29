@@ -18,22 +18,23 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package io.jsondb.testmodel;
+package io.jsondb.tests.model;
 
 import io.jsondb.annotation.Document;
 import io.jsondb.annotation.Id;
+import io.jsondb.annotation.Secret;
 
 /**
- * A test Pojo representing a AWS EC3 Volume
+ * A test Pojo representing a AWS EC3 Secure Volume
  * @version 1.0 06-Oct-2016
  */
-@Document(collection = "volumes", schemaVersion= "1.0")
-public class Volume {
+@Document(collection = "securevolumes", schemaVersion= "1.0")
+public class SecureVolume {
   @Id
   private String id;
   private String name;
-  private long size;
-  public boolean flash;
+  @Secret
+  private long encryptionKey;
   
   public String getId() {
     return id;
@@ -47,16 +48,10 @@ public class Volume {
   public void setName(String name) {
     this.name = name;
   }
-  public long getSize() {
-    return size;
+  public long getEncryptionKey() {
+    return encryptionKey;
   }
-  public void setSize(long size) {
-    this.size = size;
-  }
-  public boolean isFlash() {
-    return flash;
-  }
-  public void setFlash(boolean flash) {
-    this.flash = flash;
+  public void setEncryptionKey(long encryptionKey) {
+    this.encryptionKey = encryptionKey;
   }
 }

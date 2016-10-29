@@ -32,13 +32,13 @@ import org.junit.Test;
 import com.google.common.io.Files;
 
 import io.jsondb.JsonDBTemplate;
-import io.jsondb.TestUtils;
 import io.jsondb.Util;
 import io.jsondb.query.ddl.AddOperation;
 import io.jsondb.query.ddl.CollectionSchemaUpdate;
 import io.jsondb.query.ddl.DeleteOperation;
 import io.jsondb.query.ddl.IOperation;
-import io.jsondb.testmodel.LoadBalancer;
+import io.jsondb.tests.model.LoadBalancer;
+import io.jsondb.tests.util.TestUtils;
 
 /**
  * @version 1.0 25-Oct-2016
@@ -54,7 +54,7 @@ public class CollectionSchemaUpdateTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/loadbalancer.json"), loadbalancerJson);
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", null, true, null);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", null, true, null);
   }
 
   @After
