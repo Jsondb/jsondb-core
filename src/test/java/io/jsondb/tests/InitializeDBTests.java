@@ -88,7 +88,7 @@ public class InitializeDBTests {
 
   @Test
   public void testReload() {
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
 
     Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
     assertTrue(collectionNames.contains("instances"));

@@ -109,14 +109,14 @@ public class InitializeDBNegativeTests {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Specified DbFiles directory is actually a file cannot use it as a directory");
 
-    new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.testmodel");
+    new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.tests.model");
   }
   
   @Test
   public void testDBInitializationforMissingFile() throws IOException, GeneralSecurityException {
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
     ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel", cipher);
+    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
     
     assertTrue(jsonDBTemplate.collectionExists("instances"));
     
