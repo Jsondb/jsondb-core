@@ -22,6 +22,7 @@ package io.jsondb.tests;
 
 import java.io.File;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,6 +30,9 @@ import org.junit.rules.ExpectedException;
 
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
+import io.jsondb.Util;
+import io.jsondb.tests.model.PojoForPrivateGetIdTest;
+import io.jsondb.tests.model.PojoForPrivateSetIdTest;
 
 /**
  * A unit test class for methods in Util class
@@ -46,12 +50,40 @@ public class UtilTests {
   @Before
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.testmodel");
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
   }
+  
+  @After
+  public void tearDown() throws Exception {
+    Util.delete(dbFilesFolder);
+  }
+
   @Test
-  public void testDetermineCollectionName() {
+  public void test_determineCollectionName() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("No class parameter provided, entity collection can't be determined");
     jsonDBTemplate.getCollectionName(null);
+  }
+  
+  @Test
+  public void test_getIdForEntity_1() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Failed to invoke getter method for a idAnnotated field due to permissions");
+    
+    jsonDBTemplate.createCollection(PojoForPrivateGetIdTest.class);
+    
+    PojoForPrivateGetIdTest s = new PojoForPrivateGetIdTest("001");
+    jsonDBTemplate.insert(s);
+  }
+  
+  @Test
+  public void test_setIdForEntity_1() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Failed to invoke setter method for a idAnnotated field due to permissions");
+    
+    jsonDBTemplate.createCollection(PojoForPrivateSetIdTest.class);
+    
+    PojoForPrivateSetIdTest s = new PojoForPrivateSetIdTest();
+    jsonDBTemplate.insert(s);
   }
 }
