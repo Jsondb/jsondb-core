@@ -110,11 +110,14 @@ public class Util {
       try {
         id = getterMethodForId.invoke(document);
       } catch (IllegalAccessException e) {
-        logger.error("Failed to invoke method for a idAnnotated field due to permissions", e);
+        logger.error("Failed to invoke getter method for a idAnnotated field due to permissions", e);
+        throw new InvalidJsonDbApiUsageException("Failed to invoke getter method for a idAnnotated field due to permissions", e);
       } catch (IllegalArgumentException e) {
-        logger.error("Failed to invoke method for a idAnnotated field due to wrong arguments", e);
+        logger.error("Failed to invoke getter method for a idAnnotated field due to wrong arguments", e);
+        throw new InvalidJsonDbApiUsageException("Failed to invoke getter method for a idAnnotated field due to wrong arguments", e);
       } catch (InvocationTargetException e) {
-        logger.error("Failed to invoke method for a idAnnotated field, the method threw a exception", e);
+        logger.error("Failed to invoke getter method for a idAnnotated field, the method threw a exception", e);
+        throw new InvalidJsonDbApiUsageException("Failed to invoke getter method for a idAnnotated field, the method threw a exception", e);
       }
     }
     return id;
@@ -135,11 +138,14 @@ public class Util {
       try {
         id = setterMethodForId.invoke(document, id);
       } catch (IllegalAccessException e) {
-        logger.error("Failed to invoke method for a idAnnotated field due to permissions", e);
+        logger.error("Failed to invoke setter method for a idAnnotated field due to permissions", e);
+        throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field due to permissions", e);
       } catch (IllegalArgumentException e) {
-        logger.error("Failed to invoke method for a idAnnotated field due to wrong arguments", e);
+        logger.error("Failed to invoke setter method for a idAnnotated field due to wrong arguments", e);
+        throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field due to wrong arguments", e);
       } catch (InvocationTargetException e) {
-        logger.error("Failed to invoke method for a idAnnotated field, the method threw a exception", e);
+        logger.error("Failed to invoke setter method for a idAnnotated field, the method threw a exception", e);
+        throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field, the method threw a exception", e);
       }
     }
     return id;
