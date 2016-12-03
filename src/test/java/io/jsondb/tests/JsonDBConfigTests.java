@@ -76,6 +76,8 @@ public class JsonDBConfigTests {
     assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
     dbConfig.setCompatibilityMode(true);
     assertFalse(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+    dbConfig.setCompatibilityMode(false);
+    assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
     
     ObjectMapper newMapper = new ObjectMapper();
     dbConfig.setObjectMapper(newMapper);
