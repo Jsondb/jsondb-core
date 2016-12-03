@@ -23,12 +23,14 @@ package io.jsondb.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.nio.charset.Charset;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.jsondb.DefaultSchemaVersionComparator;
@@ -69,6 +71,11 @@ public class JsonDBConfigTests {
     
     dbConfig.setBaseScanPackage("io.newpackage");
     assertEquals("io.newpackage", dbConfig.getBaseScanPackage());
+    
+    ObjectMapper mapper = dbConfig.getObjectMapper();
+    assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+    dbConfig.setCompatibilityMode(true);
+    assertFalse(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
     
     ObjectMapper newMapper = new ObjectMapper();
     dbConfig.setObjectMapper(newMapper);
