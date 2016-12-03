@@ -34,12 +34,14 @@ import org.junit.rules.ExpectedException;
 
 import com.google.common.io.Files;
 
+import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.query.Update;
 import io.jsondb.tests.model.Instance;
+import io.jsondb.tests.model.Site;
 
 /**
  * @version 1.0 15-Oct-2016
@@ -118,6 +120,25 @@ public class FindAndModifyTests {
   }
 
   @Test
+  public void testFindAndModify_NonExistingCollection_1() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    String jxQuery = String.format("/.[id>'%s']", "03");
+    jsonDBTemplate.findAndModify(jxQuery, null, "sites");
+  }
+  
+  @Test
+  public void testFindAndModify_NonExistingCollection_2() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    String jxQuery = String.format("/.[id>'%s']", "03");
+    
+    jsonDBTemplate.findAndModify(jxQuery, null, Site.class);
+  }
+  
+  @Test
   public void testFindAllAndModify() {
     Update update = Update.update("privateKey", "SavingPrivateRyan");
     update.set("publicKey", "SavedByPublic");
@@ -143,5 +164,23 @@ public class FindAndModifyTests {
     Instance instance3 = jsonDBTemplate.findById("06", "instances");
     assertEquals("SavingPrivateRyan", instance3.getPrivateKey());
     assertEquals("SavedByPublic", instance3.getPublicKey());
+  }
+  
+  @Test
+  public void testFindAllAndModify_NonExistingCollection_1() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    String jxQuery = String.format("/.[id>'%s']", "03");
+    jsonDBTemplate.findAllAndModify(jxQuery, null, "sites");
+  }
+  
+  @Test
+  public void testFindAllAndModify_NonExistingCollection_2() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    String jxQuery = String.format("/.[id>'%s']", "03");
+    jsonDBTemplate.findAllAndModify(jxQuery, null, Site.class);
   }
 }

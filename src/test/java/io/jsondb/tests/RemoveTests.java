@@ -92,6 +92,17 @@ public class RemoveTests {
   @Test
   public void testRemove_NullObject() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Null Object cannot be removed from DB");
+    Object nullObject = null;
+    jsonDBTemplate.remove(nullObject, Instance.class);
+  }
+  
+  /**
+   * Test to remove a null object from a collection
+   */
+  @Test
+  public void testRemove_NullObjectBatch() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Null Object batch cannot be removed from DB");
 
     jsonDBTemplate.remove(null, Instance.class);
@@ -111,6 +122,22 @@ public class RemoveTests {
     jsonDBTemplate.remove(s, Site.class);
   }
 
+  /**
+   * Test to remove a object from a non-existent collection
+   */
+  @Test
+  public void testRemoveBatch_FromNonExistingCollection() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+
+    Site s = new Site();
+    s.setId("000012");
+    List<Site> ss = new ArrayList<Site>();
+    ss.add(s);
+
+    jsonDBTemplate.remove(ss, "sites");
+  }
+  
   /**
    * Test to remove a single object from a collection
    */

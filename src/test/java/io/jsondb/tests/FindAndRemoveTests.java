@@ -95,12 +95,24 @@ public class FindAndRemoveTests {
    * Test to remove a object from a non-existent collection
    */
   @Test
-  public void testRemove_FromNonExistingCollection() {
+  public void testRemove_FromNonExistingCollection_1() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
 
     String jxQuery = String.format("/.[id='%s']", "12");
     jsonDBTemplate.findAndRemove(jxQuery, Site.class);
+  }
+  
+  /**
+   * Test to remove a object from a non-existent collection
+   */
+  @Test
+  public void testRemove_FromNonExistingCollection_2() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+
+    String jxQuery = String.format("/.[id='%s']", "12");
+    jsonDBTemplate.findAndRemove(jxQuery, "sites");
   }
 
   /**
@@ -156,5 +168,29 @@ public class FindAndRemoveTests {
     assertEquals(size-2, instances.size());
     assertNotNull(removedObjects);
     assertEquals(2, removedObjects.size());
+  }
+  
+  /**
+   * Test to remove a object from a non-existent collection
+   */
+  @Test
+  public void testFindAllAndRemove_FromNonExistingCollection_1() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+
+    String jxQuery = String.format("/.[id='%s']", "12");
+    jsonDBTemplate.findAllAndRemove(jxQuery, Site.class);
+  }
+  
+  /**
+   * Test to remove a object from a non-existent collection
+   */
+  @Test
+  public void testFindAllAndRemove_FromNonExistingCollection_2() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+
+    String jxQuery = String.format("/.[id='%s']", "12");
+    jsonDBTemplate.findAllAndRemove(jxQuery, "sites");
   }
 }

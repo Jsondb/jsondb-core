@@ -120,10 +120,31 @@ public class UpsertTests {
    * Test to upsert a null object.
    */
   @Test
-  public void testUpsert_Null() {
+  public void testUpsert_Null_1() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Null Object cannot be upserted into DB");
     jsonDBTemplate.upsert(null);
+  }
+  
+  /**
+   * Test to upsert a null object.
+   */
+  @Test
+  public void testUpsert_Null_2() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Null Object cannot be upserted into DB");
+    Object nullObject = null;
+    jsonDBTemplate.upsert(nullObject, "instances");
+  }
+  
+  /**
+   * Test to upsert a null object.
+   */
+  @Test
+  public void testUpsert_Null_3() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Null Object batch cannot be upserted into DB");
+    jsonDBTemplate.upsert(null, "instances");
   }
 
   /**

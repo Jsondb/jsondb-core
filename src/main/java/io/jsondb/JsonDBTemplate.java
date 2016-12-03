@@ -791,6 +791,9 @@ public class JsonDBTemplate implements JsonDBOperations {
   @SuppressWarnings("unchecked")
   @Override
   public <T> void insert(Collection<? extends T> batchToSave, String collectionName) {
+    if (null == batchToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object batch cannot be inserted into DB");
+    }
     CollectionMetaData collectionMeta = cmdMap.get(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
@@ -1098,6 +1101,9 @@ public class JsonDBTemplate implements JsonDBOperations {
   @SuppressWarnings("unchecked")
   @Override
   public <T> void upsert(Collection<? extends T> batchToSave, String collectionName) {
+    if (null == batchToSave) {
+      throw new InvalidJsonDbApiUsageException("Null Object batch cannot be upserted into DB");
+    }
     CollectionMetaData collectionMeta = cmdMap.get(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
