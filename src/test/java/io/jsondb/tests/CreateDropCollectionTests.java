@@ -30,9 +30,11 @@ import java.util.Set;
 
 import com.google.common.io.Files;
 
+import io.jsondb.DefaultSchemaVersionComparator;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
+import io.jsondb.tests.model.Instance;
 import io.jsondb.tests.model.Site;
 
 import org.junit.After;
@@ -55,7 +57,7 @@ public class CreateDropCollectionTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", false, new DefaultSchemaVersionComparator());
   }
 
   @After
@@ -67,6 +69,7 @@ public class CreateDropCollectionTests {
   public void testCreateDropCollection() {
     Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
     assertTrue(collectionNames.contains("instances"));
+    assertEquals("instances", jsonDBTemplate.getCollectionName(Instance.class));
     assertEquals(collectionNames.size(), 1);
 
     jsonDBTemplate.createCollection(Site.class);
