@@ -4,8 +4,7 @@ machine:
 
 checkout:
   post:
-    - git fetch --unshallow
-    - git fetch --tags
+    - git fetch --depth=99999 --tags
 
 ## Customize dependencies
 dependencies:
