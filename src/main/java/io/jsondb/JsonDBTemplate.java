@@ -60,6 +60,7 @@ import io.jsondb.query.Update;
 import io.jsondb.query.ddl.AddOperation;
 import io.jsondb.query.ddl.CollectionSchemaUpdate;
 import io.jsondb.query.ddl.DeleteOperation;
+import io.jsondb.query.ddl.RenameOperation;
 
 /**
  * @version 1.0 25-Sep-2016
@@ -377,7 +378,31 @@ public class JsonDBTemplate implements JsonDBOperations {
     boolean reloadCollectionAsSomethingChanged = false;
     //We only take care of ADD and RENAME, the deletes will be taken care of automatically.
     if (null != update) {
-      //TODO Add Rename Support
+      Map<String, RenameOperation> renOps = update.getRenameOperations();
+      if (renOps.size() > 0) {
+        reloadCollectionAsSomethingChanged = true;
+        cmd.getCollectionLock().writeLock().lock();
+        
+        @SuppressWarnings("unchecked")
+        Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+        
+        for(Entry<String, RenameOperation> updateEntry: renOps.entrySet()) {
+          String oldKey = updateEntry.getKey();
+          
+          RenameOperation op = updateEntry.getValue();
+          String newKey = op.getNewName();
+
+          JsonWriter jw;
+          try {
+            jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+          } catch (IOException ioe) {
+            logger.error("Failed to obtain writer for " + collectionName, ioe);
+            throw new JsonDBException("Failed to save " + collectionName, ioe);
+          }
+          jw.renameKeyInJsonFile(collection.values(), true, oldKey, newKey);
+        }
+        cmd.getCollectionLock().writeLock().unlock();
+      }
       
       Map<String, AddOperation> addOps = update.getAddOperations();
       if (addOps.size() > 0) {
@@ -416,7 +441,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
       
       Map<String, DeleteOperation> delOps = update.getDeleteOperations();
-      if ((addOps.size() < 1) && (delOps.size() > 0)) {
+      if ((renOps.size() < 1 && addOps.size() < 1) && (delOps.size() > 0)) {
         //There were no ADD operations but there are some DELETE operations so we have to just flush the collection once
         //This would not have been necessary if there was even 1 ADD operation
         

@@ -37,6 +37,7 @@ import io.jsondb.query.ddl.AddOperation;
 import io.jsondb.query.ddl.CollectionSchemaUpdate;
 import io.jsondb.query.ddl.DeleteOperation;
 import io.jsondb.query.ddl.IOperation;
+import io.jsondb.query.ddl.RenameOperation;
 import io.jsondb.tests.model.LoadBalancer;
 import io.jsondb.tests.util.TestUtils;
 
@@ -62,6 +63,33 @@ public class CollectionSchemaUpdateTests {
     Util.delete(dbFilesFolder);
   }
 
+  @Test
+  public void test_RenameField() {
+    assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+
+    IOperation renOperation = new RenameOperation("admin");
+    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
+
+    jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
+
+    assertFalse(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+
+    String[] expectedLinesAtEnd = {
+        "{\"schemaVersion\":\"1.0\"}",
+        "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"admin\":\"admin\",\"osName\":null}",
+        "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"admin\":\"admin\",\"osName\":null}"};
+
+    TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+  }
+  
   @Test
   public void test_AddDeleteField() {
     assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
