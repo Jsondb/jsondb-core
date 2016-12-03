@@ -33,6 +33,7 @@ import org.junit.rules.ExpectedException;
 
 import com.google.common.io.Files;
 
+import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
@@ -48,8 +49,11 @@ public class EncryptionTests {
   private String dbFilesLocation = "src/test/resources/dbfiles/encryptionTests";
   private File dbFilesFolder = new File(dbFilesLocation);
   private File instancesJson = new File(dbFilesFolder, "instances.json");
+  
+  private String dbFilesLocation2 = "src/test/resources/dbfiles/encryptionTests2";
 
   private JsonDBTemplate jsonDBTemplate = null;
+  private JsonDBTemplate unencryptedjsonDBTemplate = null;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -58,15 +62,11 @@ public class EncryptionTests {
   public void setUp() throws Exception {
     dbFilesFolder.mkdir();
     Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    ICipher cipher = null;
-    try {
-      cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    } catch (GeneralSecurityException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
 
     jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
+    
+    unencryptedjsonDBTemplate = new JsonDBTemplate(dbFilesLocation2, "io.jsondb.tests.model");
   }
 
   @After
@@ -114,5 +114,15 @@ public class EncryptionTests {
 
     Instance i = jsonDBTemplate.findById("01", "instances");
     assertEquals("b87eb02f5dd7e5232d7b0fc30a5015e4", i.getPrivateKey());
+  }
+  
+  @Test
+  public void changeEncryptionTest2() throws GeneralSecurityException {
+    ICipher newCipher = new DefaultAESCBCCipher("jCt039xT0eUwkIqAWACw/w==");
+
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("DB is not encrypted, nothing to change for EncryptionKey");
+    
+    unencryptedjsonDBTemplate.changeEncryption(newCipher);
   }
 }

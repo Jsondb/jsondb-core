@@ -92,7 +92,13 @@ public class JsonDBTemplate implements JsonDBOperations {
 
   public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
     dbConfig = new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator);
-    this.encrypted = true;
+    if (null == cipher) {
+      logger.info("Encryption is not enabled for JSON DB");
+      this.encrypted = false;
+    } else {
+      logger.info("Encryption is enabled for JSON DB");
+      this.encrypted = true;
+    }
     initialize();
     eventListenerList = new EventListenerList(dbConfig, cmdMap);
   }
@@ -332,15 +338,12 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public void dropCollection(String collectionName) {
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
-    if(null == collectionMeta) {
-      throw new InvalidJsonDbApiUsageException("Failed to find collection with name '" + collectionName + "'");
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if((null == cmd) || (!collectionsRef.get().containsKey(collectionName))) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
-    collectionMeta.getCollectionLock().writeLock().lock();
+    cmd.getCollectionLock().writeLock().lock();
     try {
-      if (!collectionsRef.get().containsKey(collectionName)) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found.");
-      }
       File toDelete = fileObjectsRef.get().get(collectionName);
       try {
         Files.deleteIfExists(toDelete.toPath());
@@ -354,7 +357,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       collectionsRef.get().remove(collectionName);
       contextsRef.get().remove(collectionName);
     } finally {
-      collectionMeta.getCollectionLock().writeLock().unlock();
+      cmd.getCollectionLock().writeLock().unlock();
     }
   }
 
@@ -372,7 +375,9 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    @SuppressWarnings("unchecked")
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     boolean reloadCollectionAsSomethingChanged = false;
@@ -382,12 +387,6 @@ public class JsonDBTemplate implements JsonDBOperations {
       if (renOps.size() > 0) {
         reloadCollectionAsSomethingChanged = true;
         cmd.getCollectionLock().writeLock().lock();
-        
-        @SuppressWarnings("unchecked")
-        Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-        if (null == collection) {
-          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-        }
         
         for(Entry<String, RenameOperation> updateEntry: renOps.entrySet()) {
           String oldKey = updateEntry.getKey();
@@ -411,12 +410,6 @@ public class JsonDBTemplate implements JsonDBOperations {
       if (addOps.size() > 0) {
         reloadCollectionAsSomethingChanged = true;
         cmd.getCollectionLock().writeLock().lock();
-    
-        @SuppressWarnings("unchecked")
-        Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-        if (null == collection) {
-          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-        }
         
         for(Entry<String, AddOperation> updateEntry: addOps.entrySet()) {
           AddOperation op = updateEntry.getValue();
@@ -454,11 +447,6 @@ public class JsonDBTemplate implements JsonDBOperations {
         reloadCollectionAsSomethingChanged = true;
         cmd.getCollectionLock().writeLock().lock();
         
-        @SuppressWarnings("unchecked")
-        Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-        if (null == collection) {
-          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-        }
         JsonWriter jw;
         try {
           jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
@@ -578,7 +566,8 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> List<T> find(String jxQuery, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().readLock().lock();
@@ -618,15 +607,12 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> List<T> findAll(String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().readLock().lock();
     try {
-      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-      if (null == collection) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-      }
       List<T> newCollection = new ArrayList<T>();
       for (T document : collection.values()) {
         T obj = (T)Util.deepCopy(document);
@@ -660,26 +646,23 @@ public class JsonDBTemplate implements JsonDBOperations {
   @SuppressWarnings("unchecked")
   @Override
   public <T> T findById(Object id, String collectionName) {
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
-    if(null == collectionMeta) {
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || null == collection) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
-    collectionMeta.getCollectionLock().readLock().lock();
+    cmd.getCollectionLock().readLock().lock();
     try {
-      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-      if (null == collection) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-      }
       Object obj = Util.deepCopy(collection.get(id));
-      if(encrypted && collectionMeta.hasSecret() && null != obj){
-        CryptoUtil.decryptFields(obj, collectionMeta, dbConfig.getCipher());
+      if(encrypted && cmd.hasSecret() && null != obj){
+        CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
       }
       return (T) obj;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
       logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
-      collectionMeta.getCollectionLock().readLock().unlock();
+      cmd.getCollectionLock().readLock().unlock();
     }
   }
 
@@ -698,14 +681,11 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> T findOne(String jxQuery, String collectionName) {
     CollectionMetaData collectionMeta = cmdMap.get(collectionName);
-    if(null == collectionMeta) {
+    if((null == collectionMeta) || (!collectionsRef.get().containsKey(collectionName))) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
     }
     collectionMeta.getCollectionLock().readLock().lock();
     try {
-      if (!collectionsRef.get().containsKey(collectionName)) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first");
-      }
       JXPathContext context = contextsRef.get().get(collectionName);
       Iterator<T> resultItr = context.iterate(jxQuery);
       while (resultItr.hasNext()) {
@@ -1194,17 +1174,13 @@ public class JsonDBTemplate implements JsonDBOperations {
       throw new InvalidJsonDbApiUsageException("Query string cannot be null.");
     }
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    @SuppressWarnings("unchecked")
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().writeLock().lock();
     try {
-      @SuppressWarnings("unchecked")
-      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-      if (null == collection) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-      }
-
       JXPathContext context = contextsRef.get().get(collectionName);
       @SuppressWarnings("unchecked")
       Iterator<T> resultItr = context.iterate(jxQuery);
@@ -1255,17 +1231,13 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> List<T> findAllAndRemove(String jxQuery, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    @SuppressWarnings("unchecked")
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().writeLock().lock();
     try {
-      @SuppressWarnings("unchecked")
-      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-      if (null == collection) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-      }
-
       JXPathContext context = contextsRef.get().get(collectionName);
       @SuppressWarnings("unchecked")
       Iterator<T> resultItr = context.iterate(jxQuery);
@@ -1319,16 +1291,12 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> T findAndModify(String jxQuery, Update update, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().writeLock().lock();
     try {
-      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-      if (null == collection) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-      }
-
       JXPathContext context = contextsRef.get().get(collectionName);
       Iterator<T> resultItr = context.iterate(jxQuery);
       T objectToModify = null;
@@ -1398,16 +1366,12 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> List<T> findAllAndModify(String jxQuery, Update update, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if(null == cmd) {
+    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().writeLock().lock();
     try {
-      Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-      if (null == collection) {
-        throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
-      }
-
       JXPathContext context = contextsRef.get().get(collectionName);
       Iterator<T> resultItr = context.iterate(jxQuery);
       Map<Object, T> clonedModifiedObjects = new HashMap<Object, T>();

@@ -25,9 +25,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.Comparator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,8 +36,6 @@ import io.jsondb.crypto.ICipher;
  * @version 1.0 25-Sep-2016
  */
 public class JsonDBConfig {
-  private Logger logger = LoggerFactory.getLogger(JsonDBConfig.class);
-
   //Settings
   private Charset charset;
   private String dbFilesLocationString;
@@ -63,12 +58,6 @@ public class JsonDBConfig {
     this.dbFilesPath = dbFilesLocation.toPath();
     this.baseScanPackage = baseScanPackage;
     this.cipher = cipher;
-
-    if (null == cipher) {
-      logger.info("Encryption is not enabled for JSON DB");
-    } else {
-      logger.info("Encryption is enabled for JSON DB");
-    }
 
     this.compatibilityMode = compatibilityMode;
     this.objectMapper = new ObjectMapper();

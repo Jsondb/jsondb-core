@@ -101,12 +101,33 @@ public class InsertTests {
    * Test to insert a null object.
    */
   @Test
-  public void testInsert_ANullObject() {
+  public void testInsert_ANullObject_1() {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Null Object cannot be inserted into DB");
     jsonDBTemplate.insert(null);
   }
 
+  /**
+   * Test to insert a null object.
+   */
+  @Test
+  public void testInsert_ANullObject_2() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Null Object batch cannot be inserted into DB");
+    jsonDBTemplate.insert(null, "sites");
+  }
+  
+  /**
+   * Test to insert a null object.
+   */
+  @Test
+  public void testInsert_ANullObject_3() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Null Object cannot be inserted into DB");
+    Object nullObject = null;
+    jsonDBTemplate.insert(nullObject, "sites");
+  }
+  
   /**
    * Test to insert a Collection object.
    */
