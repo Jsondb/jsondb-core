@@ -372,8 +372,8 @@ public class JsonDBTemplate implements JsonDBOperations {
   @Override
   public <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    if (null == cmd) {
-      throw new InvalidJsonDbApiUsageException("Failed to find collection with name '" + collectionName + "'");
+    if(null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     boolean reloadCollectionAsSomethingChanged = false;
     //We only take care of ADD and RENAME, the deletes will be taken care of automatically.
@@ -385,6 +385,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         
         @SuppressWarnings("unchecked")
         Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+        if (null == collection) {
+          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+        }
         
         for(Entry<String, RenameOperation> updateEntry: renOps.entrySet()) {
           String oldKey = updateEntry.getKey();
@@ -411,6 +414,9 @@ public class JsonDBTemplate implements JsonDBOperations {
     
         @SuppressWarnings("unchecked")
         Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+        if (null == collection) {
+          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+        }
         
         for(Entry<String, AddOperation> updateEntry: addOps.entrySet()) {
           AddOperation op = updateEntry.getValue();
@@ -450,6 +456,9 @@ public class JsonDBTemplate implements JsonDBOperations {
         
         @SuppressWarnings("unchecked")
         Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
+        if (null == collection) {
+          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+        }
         JsonWriter jw;
         try {
           jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));

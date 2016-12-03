@@ -20,17 +20,22 @@
  */
 package io.jsondb.tests;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.Map;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.io.Files;
 
+import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.query.ddl.AddOperation;
@@ -50,6 +55,9 @@ public class CollectionSchemaUpdateTests {
   private File loadbalancerJson = new File(dbFilesFolder, "loadbalancer.json");
 
   private JsonDBTemplate jsonDBTemplate = null;
+  
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void setUp() throws Exception {
@@ -69,6 +77,9 @@ public class CollectionSchemaUpdateTests {
 
     IOperation renOperation = new RenameOperation("admin");
     CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
+    
+    Map<String, IOperation> allUpdateOps = cu.getUpdateData();
+    assertEquals(1, allUpdateOps.size());
 
     jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
 
@@ -142,5 +153,38 @@ public class CollectionSchemaUpdateTests {
         "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":null}"};
 
     TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+  }
+  
+  @Test
+  public void test_RenameInNonExistingCollection() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    IOperation renOperation = new RenameOperation("admin");
+    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
+
+    jsonDBTemplate.updateCollectionSchema(cu, "sites");
+  }
+  
+  @Test
+  public void test_AddToNonExistingCollection() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    IOperation addOperation = new AddOperation("mac", false);
+    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("osName", addOperation);
+
+    jsonDBTemplate.updateCollectionSchema(cu, "sites");
+  }
+  
+  @Test
+  public void test_DeleteFromNonExistingCollection() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
+    
+    IOperation delOperation = new DeleteOperation();
+    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("deletedField", delOperation);
+
+    jsonDBTemplate.updateCollectionSchema(cu, "sites");
   }
 }
