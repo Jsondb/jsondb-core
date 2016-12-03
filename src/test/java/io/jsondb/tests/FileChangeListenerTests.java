@@ -104,6 +104,22 @@ public class FileChangeListenerTests {
         jsonDBTemplate.reloadCollection(collectionName);
       }
     });
+    
+    //Add a additional do nothing listener to test addition of one more listener
+    jsonDBTemplate.addCollectionFileChangeListener(new CollectionFileChangeListener() {
+      @Override
+      public void collectionFileModified(String collectionName) {
+      }
+
+      @Override
+      public void collectionFileDeleted(String collectionName) {
+      }
+
+      @Override
+      public void collectionFileAdded(String collectionName) {
+      }
+    });
+    
     assertFalse(jsonDBTemplate.collectionExists(Instance.class));
     try {
       Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);

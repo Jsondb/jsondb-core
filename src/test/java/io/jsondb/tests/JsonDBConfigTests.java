@@ -29,6 +29,9 @@ import java.nio.charset.Charset;
 
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.jsondb.DefaultSchemaVersionComparator;
 import io.jsondb.JsonDBConfig;
 import io.jsondb.crypto.ICipher;
 
@@ -41,7 +44,8 @@ public class JsonDBConfigTests {
 
   @Test
   public void testDbConfig() {
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false, null);
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
+        new DefaultSchemaVersionComparator());
 
     assertEquals("src/test/resources/dbfiles/dbConfigTests", dbConfig.getDbFilesLocationString());
     assertEquals(new File("src/test/resources/dbfiles/dbConfigTests"), dbConfig.getDbFilesLocation());
@@ -61,8 +65,16 @@ public class JsonDBConfigTests {
     
     ICipher mCipher = new MyCipher();
     dbConfig.setCipher(mCipher);
-    assertEquals(mCipher, dbConfig.getCipher());   
+    assertEquals(mCipher, dbConfig.getCipher());
+    
+    dbConfig.setBaseScanPackage("io.newpackage");
+    assertEquals("io.newpackage", dbConfig.getBaseScanPackage());
+    
+    ObjectMapper newMapper = new ObjectMapper();
+    dbConfig.setObjectMapper(newMapper);
+    assertEquals(newMapper, dbConfig.getObjectMapper());
   }
+  
   
   private class MyCipher implements ICipher {
 
