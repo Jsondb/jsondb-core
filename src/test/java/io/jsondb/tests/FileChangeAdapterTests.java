@@ -87,10 +87,12 @@ public class FileChangeAdapterTests {
     Util.delete(dbFilesFolder);
   }
 
+  private boolean collectionFileAddedFired = false;
   private class FileAddedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
     public void collectionFileAdded(String collectionName) {
       jsonDBTemplate.reloadCollection(collectionName);
+      collectionFileAddedFired = true;
     }
   }
   @Test
@@ -108,15 +110,18 @@ public class FileChangeAdapterTests {
     } catch (InterruptedException e) {
       fail("Failed to wait for db reload");
     }
+    assertTrue(collectionFileAddedFired);
     List<Instance> instances = jsonDBTemplate.findAll(Instance.class);
     assertNotNull(instances);
     assertNotEquals(instances.size(), 0);
   }
 
+  private boolean collectionFileModifiedFired = false;
   private class FileModifiedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
     public void collectionFileModified(String collectionName) {
       jsonDBTemplate.reloadCollection(collectionName);
+      collectionFileModifiedFired = true;
     }
   }
   @Test
@@ -149,14 +154,17 @@ public class FileChangeAdapterTests {
     } catch (InterruptedException e) {
       fail("Failed to wait for db reload");
     }
+    assertTrue(collectionFileModifiedFired);
     int newCount = jsonDBTemplate.findAll(Instance.class).size();
     assertEquals(oldCount + 1, newCount);
   }
 
+  private boolean collectionFileDeletedFired = false;
   private class FileDeletedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
     public void collectionFileDeleted(String collectionName) {
       jsonDBTemplate.reLoadDB();
+      collectionFileDeletedFired = true;
     }
   }
   @Test
@@ -174,6 +182,7 @@ public class FileChangeAdapterTests {
       fail("Failed to wait for db reload");
     }
 
+    assertTrue(collectionFileDeletedFired);
     assertFalse(jsonDBTemplate.collectionExists(PojoWithEnumFields.class));
   }
 
