@@ -91,6 +91,7 @@ public class FileChangeAdapterTests {
   private class FileAddedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
     public void collectionFileAdded(String collectionName) {
+      super.collectionFileAdded(collectionName);
       jsonDBTemplate.reloadCollection(collectionName);
       collectionFileAddedFired = true;
     }
@@ -120,6 +121,7 @@ public class FileChangeAdapterTests {
   private class FileModifiedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
     public void collectionFileModified(String collectionName) {
+      super.collectionFileModified(collectionName);
       jsonDBTemplate.reloadCollection(collectionName);
       collectionFileModifiedFired = true;
     }
@@ -163,6 +165,7 @@ public class FileChangeAdapterTests {
   private class FileDeletedChangeAdapter extends CollectionFileChangeAdapter {
     @Override
     public void collectionFileDeleted(String collectionName) {
+      super.collectionFileDeleted(collectionName);
       jsonDBTemplate.reLoadDB();
       collectionFileDeletedFired = true;
     }
