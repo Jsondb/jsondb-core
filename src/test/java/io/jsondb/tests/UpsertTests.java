@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
@@ -42,6 +43,7 @@ import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.tests.model.Instance;
+import io.jsondb.tests.model.PojoWithList;
 import io.jsondb.tests.model.Site;
 import io.jsondb.tests.model.Volume;
 import io.jsondb.tests.util.TestUtils;
@@ -54,6 +56,7 @@ public class UpsertTests {
   private File dbFilesFolder = new File(dbFilesLocation);
   private File instancesJson = new File(dbFilesFolder, "instances.json");
   private File volumesJson = new File(dbFilesFolder, "volumes.json");
+  private File pojoWithListJson = new File(dbFilesFolder, "pojowithlist.json");
 
   private JsonDBTemplate jsonDBTemplate = null;
   private ICipher cipher;
@@ -321,5 +324,22 @@ public class UpsertTests {
     instances = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(instances);
     assertEquals(size+1, instances.size());
+  }
+  
+  @Test
+  public void testUpsert_ObjectWithList() {
+    jsonDBTemplate.createCollection(PojoWithList.class);
+    PojoWithList bean = new PojoWithList();
+    bean.setId("000002");
+    List<String> stuff = new ArrayList<String>(Arrays.asList("A", "B"));
+    bean.setStuff(stuff);
+
+    jsonDBTemplate.upsert(bean);
+    
+    String[] expectedLinesAtEnd = {
+        "{\"schemaVersion\":\"1.0\"}",
+        "{\"id\":\"000002\",\"stuff\":[\"A\",\"B\"]}" };
+
+    TestUtils.checkLastLines(pojoWithListJson, expectedLinesAtEnd);
   }
 }
