@@ -28,6 +28,7 @@ import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
 
@@ -78,14 +79,14 @@ public class JsonReader {
     channel = raf.getChannel();
     try {
       lock = channel.lock();
-    } catch (IOException e) {
+    } catch (IOException | OverlappingFileLockException e) {
       try {
         channel.close();
         raf.close();
       } catch (IOException e1) {
         logger.error("Failed while closing RandomAccessFile for collection file {}", collectionFile.getName());
       }
-      throw new JsonFileLockException("JsonReader failed to obtain a file lock for file" + fileLockLocation, e);
+      throw new JsonFileLockException("JsonReader failed to obtain a file lock for file " + fileLockLocation, e);
     }
 
     fis = new FileInputStream(collectionFile);
