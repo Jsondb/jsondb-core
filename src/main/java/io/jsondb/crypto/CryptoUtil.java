@@ -69,14 +69,8 @@ public class CryptoUtil {
           encryptedValue = cipher.encrypt(value);
           setterMethod.invoke(object, encryptedValue);
         }
-      } catch (IllegalAccessException e) {
-        logger.error("Error when invoking method for a @Secret annotated field due to permissions", e);
-        throw e;
-      } catch (IllegalArgumentException e) {
-        logger.error("Error when invoking method for a @Secret annotated field due to wrong arguments", e);
-        throw e;
-      } catch (InvocationTargetException e) {
-        logger.error("Error when invoking method for a @Secret annotated field, the method threw a exception", e);
+      } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+        logger.error("Error when invoking method for a @Secret annotated field", e);
         throw e;
       }
     }
@@ -108,14 +102,8 @@ public class CryptoUtil {
           decryptedValue = cipher.decrypt(value);
           setterMethod.invoke(object, decryptedValue);
         }
-      } catch (IllegalAccessException e) {
-        logger.error("Error when invoking method for a @Secret annotated field due to permissions", e);
-        throw e;
-      } catch (IllegalArgumentException e) {
-        logger.error("Error when invoking method for a @Secret annotated field due to wrong arguments", e);
-        throw e;
-      } catch (InvocationTargetException e) {
-        logger.error("Error when invoking method for a @Secret annotated field, the method threw a exception", e);
+      } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+        logger.error("Error when invoking method for a @Secret annotated field", e);
         throw e;
       }
     }
