@@ -8,4 +8,18 @@ Provides APIs that are very similar and inspired by MongoDB.
 
 Provides a Apache JxPath based query system.
 
-Visit http://jsondb.io for detailed information about Jsondb, Why Jsondb and Using Jsondb 
+Visit http://jsondb.io for detailed information about Jsondb, Why Jsondb and Using Jsondb
+
+
+## JsonDB Users
+
+Send a [pull request](https://github.com/Jsondb/jsondb-core/blob/master/Readme.md) to add yours to the list.
+
+#### Applications using Jsondb
+* [Application Name](Application Url): Short description
+
+#### Libraries using Jsondb
+* [Library Name](Library Url): Short description
+
+#### Companies using Jsondb
+* [Company Name](Company Url)
