@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2018 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -51,6 +51,7 @@ public class EncryptionTests {
   private File instancesJson = new File(dbFilesFolder, "instances.json");
   
   private String dbFilesLocation2 = "src/test/resources/dbfiles/encryptionTests2";
+  private File dbFilesFolder2 = new File(dbFilesLocation2);
 
   private JsonDBTemplate jsonDBTemplate = null;
   private JsonDBTemplate unencryptedjsonDBTemplate = null;
@@ -72,6 +73,7 @@ public class EncryptionTests {
   @After
   public void tearDown() throws Exception {
     Util.delete(dbFilesFolder);
+    Util.delete(dbFilesFolder2);
   }
 
   @Test
