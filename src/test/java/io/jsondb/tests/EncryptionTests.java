@@ -45,6 +45,7 @@ import io.jsondb.tests.util.TestUtils;
  * Test for the encryption functionality
  * @version 1.0 22-Oct-2016
  */
+@SuppressWarnings("deprecation")
 public class EncryptionTests {
   private String dbFilesLocation = "src/test/resources/dbfiles/encryptionTests";
   private File dbFilesFolder = new File(dbFilesLocation);

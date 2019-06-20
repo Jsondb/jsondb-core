@@ -20,29 +20,31 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 
+import org.hamcrest.core.IsInstanceOf;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import io.jsondb.JsonDBException;
 import io.jsondb.crypto.CryptoUtil;
 import io.jsondb.crypto.DefaultAESCBCCipher;
+import io.jsondb.crypto.Default1Cipher;
 import io.jsondb.crypto.ICipher;
 
-/**
- * @version 1.0 08-Oct-2016
- */
+@SuppressWarnings("deprecation")
 public class DefaultAESCipherTests {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   
   @Test
-  public void testKeyValidity() throws UnsupportedEncodingException, GeneralSecurityException {
+  public void testKeyValidityAesCbc() throws UnsupportedEncodingException, GeneralSecurityException {
     expectedException.expect(InvalidKeyException.class);
     expectedException.expectMessage("Failed to create DefaultAESCBCCipher, something wrong with the key");
     
@@ -51,7 +53,7 @@ public class DefaultAESCipherTests {
   }
   
   @Test
-  public void testKey() throws UnsupportedEncodingException, GeneralSecurityException {
+  public void testKeyAesCbc() throws UnsupportedEncodingException, GeneralSecurityException {
     String base64EncodedKey = CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf");
     
     ICipher cipher = new DefaultAESCBCCipher(base64EncodedKey);
@@ -60,5 +62,28 @@ public class DefaultAESCipherTests {
     assertEquals("cEIxZFDVSlWIN+ZmOGyvmbWv4+ziI884BNu0Hplglws=", encryptedText);
     String decryptedText = cipher.decrypt(encryptedText);
     assertEquals("Hallo, Wie gehts", decryptedText);
+  }
+  
+  @Test
+  public void testKeyValidityDefault1() throws UnsupportedEncodingException, GeneralSecurityException {
+    expectedException.expect(JsonDBException.class);
+    expectedException.expectCause(IsInstanceOf.any(InvalidKeyException.class));
+    
+    Default1Cipher cipher = new Default1Cipher("badkey", StandardCharsets.UTF_8);
+    @SuppressWarnings("unused")
+    String encryptedText = cipher.encrypt("Hallo, Wie gehts");
+  }
+  
+  @Test
+  public void testKeyDefault1() throws UnsupportedEncodingException, GeneralSecurityException {
+    String base64EncodedKey = CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf");
+    ICipher cipher = new Default1Cipher(base64EncodedKey);
+    
+    String msg = "Hallo, gru\u00DF";
+    
+    String encryptedText = cipher.encrypt(msg);
+    String decryptedText = cipher.decrypt(encryptedText);
+    assertEquals(msg, decryptedText);
+    assertTrue("ciphertext too short", encryptedText.length() > 40);
   }
 }
