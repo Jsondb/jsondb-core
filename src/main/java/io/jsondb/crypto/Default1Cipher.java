@@ -31,6 +31,7 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.Base64;
 
+import javax.crypto.AEADBadTagException;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -59,7 +60,8 @@ public class Default1Cipher implements ICipher {
   private static final String PADDING_ALGORITHM = "NoPadding";
   private static final String PROVIDER = "SunJCE";
   private static final String CIPHER_ALGORITHM = ENCRYPTION_ALGORITHM + "/" + MODE_ALGORITHM + "/" + PADDING_ALGORITHM;
-  private static final int IV_SIZE = 12;
+  private static final int IV_SIZE = 16;
+  private static final int TAG_SIZE = 128;
   
   /* intentionally letting the system pick a sane SecureRandom; SecureRandom.getInstanceStrong() can block and is overkill. */
   private static final SecureRandom rnd = createNewSecureRandom();
@@ -127,7 +129,7 @@ public class Default1Cipher implements ICipher {
       byte[] iv = new byte[IV_SIZE];
       rnd.nextBytes(iv);
       Cipher enc = Cipher.getInstance(CIPHER_ALGORITHM, PROVIDER);
-      enc.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(IV_SIZE * 8, iv));
+      enc.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_SIZE, iv));
       byte[] input = plainText.getBytes(charset);
       int sizeReq = IV_SIZE + enc.getOutputSize(input.length);
       byte[] output = new byte[sizeReq];
@@ -153,12 +155,14 @@ public class Default1Cipher implements ICipher {
     byte[] in = Base64.getDecoder().decode(cipherText);
     try {
       Cipher dec = Cipher.getInstance(CIPHER_ALGORITHM, PROVIDER);
-      dec.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(IV_SIZE * 8, in, 0, IV_SIZE));
+      dec.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_SIZE, in, 0, IV_SIZE));
       return new String(dec.doFinal(in, IV_SIZE, in.length - IV_SIZE), charset);
     } catch (NoSuchPaddingException | NoSuchProviderException | NoSuchAlgorithmException | IllegalBlockSizeException e) {
       throw new JsonDBException("Default cipher cannot be used on this VM installation", e);
     } catch (InvalidKeyException e) {
       throw new JsonDBException("Invalid key", e);
+    } catch (AEADBadTagException e) {
+      throw new JsonDBException("Incorrect key for this ciphertext (or ciphertext is corrupted)", e);
     } catch (BadPaddingException | InvalidAlgorithmParameterException e) {
       throw new JsonDBException("Unexpected (bug?) crypto error", e);
     }
