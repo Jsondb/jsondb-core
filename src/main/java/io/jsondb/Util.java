@@ -68,6 +68,10 @@ public class Util {
 
     RESTRICTED_CLASSES = Collections.unmodifiableCollection(restrictedClasses);
   }
+  private static ObjectMapper objectMapper = new ObjectMapper()
+          .registerModule(new ParameterNamesModule())
+          .registerModule(new Jdk8Module())
+          .registerModule(new JavaTimeModule());
   
   protected static void ensureNotRestricted(Object o) {
     if (o.getClass().isArray() || RESTRICTED_CLASSES.contains(o.getClass().getName())) {
@@ -181,10 +185,6 @@ public class Util {
   protected static Object deepCopy(Object fromBean) {
     try {
       if (fromBean != null) {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .registerModule(new ParameterNamesModule())
-                .registerModule(new Jdk8Module())
-                .registerModule(new JavaTimeModule());
         return objectMapper.readValue(objectMapper.writeValueAsString(fromBean), fromBean.getClass());
       }
       return null;
