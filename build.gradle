@@ -44,9 +44,12 @@ repositories {
 
 dependencies {
   compile "org.slf4j:slf4j-api:1.7.21",
-          "com.fasterxml.jackson.core:jackson-annotations:2.8.3",
-          "com.fasterxml.jackson.core:jackson-core:2.8.3",
-          "com.fasterxml.jackson.core:jackson-databind:2.8.3",
+          "com.fasterxml.jackson.core:jackson-annotations:2.9.9",
+          "com.fasterxml.jackson.core:jackson-core:2.9.9",
+          "com.fasterxml.jackson.core:jackson-databind:2.9.9",
+          "com.fasterxml.jackson.module:jackson-module-parameter-names:2.9.9",
+          "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.9",
+          "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.9",
           "org.reflections:reflections:0.9.10",
           "org.javassist:javassist:3.20.0-GA",
           "commons-jxpath:commons-jxpath:1.3",
