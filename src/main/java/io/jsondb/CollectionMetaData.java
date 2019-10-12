@@ -71,7 +71,26 @@ public class CollectionMetaData {
     this.collectionLock = new ReentrantReadWriteLock();
 
     //Populate the class metadata
-    Field[]  fs = clazz.getDeclaredFields();
+    List<Field[]> fields = new ArrayList<>();
+    Field[] startFields = clazz.getDeclaredFields();
+    int totalFields = startFields.length;
+    fields.add(startFields);
+    while (clazz.getSuperclass() != Object.class) {
+      clazz = clazz.getSuperclass();
+      Field[] toAdd = clazz.getDeclaredFields();
+      totalFields += toAdd.length;
+      fields.add(toAdd);
+    }
+
+    int x = 0;
+    Field[] fs = new Field[totalFields];
+    for (Field[] field : fields) {
+      for (Field value : field) {
+        fs[x] = value;
+        x++;
+      }
+    }
+
     Method[] ms = clazz.getDeclaredMethods();
     for (Field f : fs) {
       String fieldName = f.getName();
@@ -115,9 +134,11 @@ public class CollectionMetaData {
   public String getSchemaVersion() {
     return schemaVersion;
   }
+
   public String getActualSchemaVersion() {
     return actualSchemaVersion;
   }
+
   public void setActualSchemaVersion(String actualSchemaVersion) {
     this.actualSchemaVersion = actualSchemaVersion;
     int compareResult = schemaComparator.compare(schemaVersion, actualSchemaVersion);
@@ -132,6 +153,7 @@ public class CollectionMetaData {
   public Class getClazz() {
     return clazz;
   }
+
   public String getIdAnnotatedFieldName() {
     return idAnnotatedFieldName;
   }
@@ -206,7 +228,7 @@ public class CollectionMetaData {
     Map<String, CollectionMetaData> collectionMetaData = new LinkedHashMap<String, CollectionMetaData>();
     Reflections reflections = new Reflections(dbConfig.getBaseScanPackage());
     Set<Class<?>> docClasses = reflections.getTypesAnnotatedWith(Document.class);
-    for(Class<?> c : docClasses) {
+    for (Class<?> c : docClasses) {
       Document d = c.getAnnotation(Document.class);
       String collectionName = d.collection();
       String version = d.schemaVersion();
