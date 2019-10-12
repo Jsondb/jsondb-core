@@ -173,17 +173,15 @@ public class JsonDBTemplate implements JsonDBOperations {
         newFileObjectmap.put(collectionName, collectionFile);
         fileObjectsRef.set(newFileObjectmap);
       }
-      if (null != cmd && null != collectionFile) {
-        Map<Object, ?> collection = loadCollection(collectionFile, collectionName, cmd);
-        if (null != collection) {
-          JXPathContext newContext = JXPathContext.newContext(collection.values());
-          contextsRef.get().put(collectionName, newContext);
-          collectionsRef.get().put(collectionName, collection);
-        } else {
-          //Since this is a reload attempt its possible the .json files have disappeared in the interim a very rare thing
-          contextsRef.get().remove(collectionName);
-          collectionsRef.get().remove(collectionName);
-        }
+      Map<Object, ?> collection = loadCollection(collectionFile, collectionName, cmd);
+      if (null != collection) {
+        JXPathContext newContext = JXPathContext.newContext(collection.values());
+        contextsRef.get().put(collectionName, newContext);
+        collectionsRef.get().put(collectionName, collection);
+      } else {
+        //Since this is a reload attempt its possible the .json files have disappeared in the interim a very rare thing
+        contextsRef.get().remove(collectionName);
+        collectionsRef.get().remove(collectionName);
       }
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
@@ -619,8 +617,8 @@ public class JsonDBTemplate implements JsonDBOperations {
         if(encrypted && cmd.hasSecret() && null!=obj){
           CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
           newCollection.add(obj);
-        } else{
-          newCollection.add((T) obj);
+        } else {
+          newCollection.add(obj);
         }
       }
       return newCollection;

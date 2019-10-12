@@ -42,9 +42,11 @@ import org.slf4j.LoggerFactory;
 import io.jsondb.JsonDBException;
 
 /**
+ * @deprecated This cipher is insufficiently secure for many purposes. Please use {@link Default1Cipher} instead.
  * @author Farooq Khan
  * @version 1.0 25-Sep-2016
  */
+@Deprecated
 public class DefaultAESCBCCipher implements ICipher {
   private Logger logger = LoggerFactory.getLogger(DefaultAESCBCCipher.class);
 
