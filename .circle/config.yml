@@ -1,0 +1,17 @@
+version: 2
+
+jobs:
+  build:
+    environment:
+      # Configure the JVM and Gradle to avoid OOM errors
+      _JAVA_OPTIONS: "-Xmx3g"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+    docker: # run the steps with Docker
+      - image: circleci/openjdk:8u222-jdk-stretch-node-browsers-legacy
+
+    steps:
+      - checkout
+      - run:
+          name: Build and Test
+          command:
+            ./gradlew test
