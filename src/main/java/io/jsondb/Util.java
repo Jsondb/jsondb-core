@@ -39,6 +39,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,6 +68,10 @@ public class Util {
 
     RESTRICTED_CLASSES = Collections.unmodifiableCollection(restrictedClasses);
   }
+  private static ObjectMapper objectMapper = new ObjectMapper()
+          .registerModule(new ParameterNamesModule())
+          .registerModule(new Jdk8Module())
+          .registerModule(new JavaTimeModule());
   
   protected static void ensureNotRestricted(Object o) {
     if (o.getClass().isArray() || RESTRICTED_CLASSES.contains(o.getClass().getName())) {
@@ -175,16 +183,14 @@ public class Util {
    * @return a new java bean cloned from fromBean.
    */
   protected static Object deepCopy(Object fromBean) {
-    ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    XMLEncoder out = new XMLEncoder(bos);
-    out.writeObject(fromBean);
-    out.close();
-
-    ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-    XMLDecoder in = new XMLDecoder(bis, null, null, JsonDBTemplate.class.getClassLoader());
-    Object toBean = in.readObject();
-    in.close();
-    return toBean;
+    try {
+      if (fromBean != null) {
+        return objectMapper.readValue(objectMapper.writeValueAsString(fromBean), fromBean.getClass());
+      }
+      return null;
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
