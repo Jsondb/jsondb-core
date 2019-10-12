@@ -15,3 +15,9 @@ jobs:
           name: Build and Test
           command:
             ./gradlew test
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - build
