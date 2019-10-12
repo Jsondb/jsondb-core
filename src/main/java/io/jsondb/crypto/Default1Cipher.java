@@ -85,6 +85,7 @@ public class Default1Cipher implements ICipher {
    * Creates a new default cipher using 'UTF-8' encoding, with a base64-encoded key.
    * 
    * @param base64CodedEncryptionKey  A base 64 encoded symmetric key to be used during encryption and decryption.
+   * @throws GeneralSecurityException  a general security exception
    */
   public Default1Cipher(String base64CodedEncryptionKey) throws GeneralSecurityException {
     this(Base64.getDecoder().decode(base64CodedEncryptionKey), StandardCharsets.UTF_8);
@@ -94,6 +95,7 @@ public class Default1Cipher implements ICipher {
    * Creates a new default cipher using 'UTF-8' encoding and key.
    * 
    * @param encryptionKey  A symmetric key to be used during encryption and decryption.
+   * @throws GeneralSecurityException  a general security exception
    */
   public Default1Cipher(byte[] encryptionKey) throws GeneralSecurityException {
     this(encryptionKey, StandardCharsets.UTF_8);
@@ -104,6 +106,7 @@ public class Default1Cipher implements ICipher {
    * 
    * @param base64CodedEncryptionKey  A base 64 encoded symmetric key to be used during encryption and decryption.
    * @param charset                   The charset to be considered when encrypting plaintext or decrypting ciphertext.
+   * @throws GeneralSecurityException  a general security exception
    */
   public Default1Cipher(String base64CodedEncryptionKey, Charset charset) throws GeneralSecurityException {
     this(Base64.getDecoder().decode(base64CodedEncryptionKey), charset);
@@ -114,6 +117,7 @@ public class Default1Cipher implements ICipher {
    * 
    * @param encryptionKey  A symmetric key to be used during encryption and decryption.
    * @param charset        The charset to be considered when encrypting plaintext or decrypting ciphertext.
+   * @throws GeneralSecurityException  a general security exception
    */
   public Default1Cipher(byte[] encryptionKey, Charset charset) throws GeneralSecurityException {
     if (charset == null) throw new NullPointerException("charset");
@@ -122,7 +126,11 @@ public class Default1Cipher implements ICipher {
     this.key = new SecretKeySpec(encryptionKey, ENCRYPTION_ALGORITHM);
   }
 
-  /** @{inheritDoc} */
+  /**
+   * This method is used to encrypt(Symmetric) plainText coming in input using AES algorithm
+   * @param plainText the plain text string to be encrypted
+   * @return Base64 encoded AES encrypted cipher text
+   */
   @Override
   public String encrypt(String plainText) {
     try {
@@ -149,7 +157,12 @@ public class Default1Cipher implements ICipher {
     }
   }
 
-  /** @{inheritDoc} */
+  /**
+   * A method to decrypt the provided cipher text.
+   *
+   * @param cipherText AES encrypted cipherText
+   * @return decrypted text
+   */
   @Override
   public String decrypt(String cipherText) {
     byte[] in = Base64.getDecoder().decode(cipherText);
