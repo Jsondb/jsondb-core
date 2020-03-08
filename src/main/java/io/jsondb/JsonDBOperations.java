@@ -251,6 +251,28 @@ public interface JsonDBOperations {
   <T> List<T> findAll(String collectionName);
 
   /**
+   * Query for a list of objects of type T from the specified collection.
+   *
+   * @param entityClass the parameterized type of the returned list.
+   * @param comparator Comparator to use for sorting the objects
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the found collection
+   */
+  <T> List<T> findAll(Class<T> entityClass, Comparator<? super T> comparator);
+
+  /**
+   * Query for a list of objects of type T from the specified collection.
+   *
+   * @param collectionName name of the collection to retrieve the objects from
+   * @param comparator Comparator to use for sorting the objects
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the found collection
+   */
+  <T> List<T> findAll(String collectionName, Comparator<? super T> comparator);
+
+  /**
    * Returns a document with the given id mapped onto the given class. The collection the query is ran against will be
    * derived from the given target class as well.
    *

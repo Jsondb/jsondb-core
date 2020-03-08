@@ -624,6 +624,23 @@ public class JsonDBTemplate implements JsonDBOperations {
   @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> findAll(String collectionName) {
+    return findAll(collectionName, null);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findAll(java.lang.Class)
+   */
+  @Override
+  public <T> List<T> findAll(Class<T> entityClass, Comparator<? super T> comparator) {
+    return findAll(Util.determineCollectionName(entityClass), comparator);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#findAll(java.lang.String)
+   */
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> List<T> findAll(String collectionName, Comparator<? super T> comparator) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
     if((null == cmd) || (null == collection)) {
@@ -640,6 +657,11 @@ public class JsonDBTemplate implements JsonDBOperations {
         } else {
           newCollection.add(obj);
         }
+      }
+      if (comparator != null) {
+        // It is tempting to attempt to sort the obejcts in the while loop above, but it has no real benefit
+        // See: https://stackoverflow.com/questions/24136930/sort-while-inserting-or-copy-and-sort
+        newCollection.sort(comparator);
       }
       return newCollection;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
