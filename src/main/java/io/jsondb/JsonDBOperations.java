@@ -21,6 +21,7 @@
 package io.jsondb;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -196,6 +197,38 @@ public interface JsonDBOperations {
    * @return the list of found objects
    */
   <T> List<T> find(String jxQuery, String collectionName);
+
+  /**
+   * Map the results of an ad-hoc query on the collection for the entity class to a List of the specified type.
+   *
+   * The objects in result are sorted according to the order induced by the specified comparator.
+   * All elements in the array must be mutually comparable by the specified comparator (that is, c.compare(e1, e2)
+   * must not throw a ClassCastException for any elements e1 and e2 in the array).
+   *
+   * @param jxQuery a XPATH query expression
+   * @param entityClass the parameterized type of the returned list.
+   * @param comparator Comparator to use for sorting the objects
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the list of found objects
+   */
+  <T> List<T> find(String jxQuery, Class<T> entityClass, Comparator<? super T> comparator);
+
+  /**
+   * Map the results of an ad-hoc query on the specified collection to a List of the specified type.
+   *
+   * The objects in result are sorted according to the order induced by the specified comparator.
+   * All elements in the array must be mutually comparable by the specified comparator (that is, c.compare(e1, e2)
+   * must not throw a ClassCastException for any elements e1 and e2 in the array).
+   *
+   * @param jxQuery a XPATH query expression
+   * @param collectionName name of the collection to retrieve the objects from
+   * @param comparator Comparator to use for sorting the objects
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the list of found objects
+   */
+  <T> List<T> find(String jxQuery, String collectionName, Comparator<? super T> comparator);
 
   /**
    * Query for a list of objects of type T from the specified collection.

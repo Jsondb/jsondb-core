@@ -1,7 +1,7 @@
 {"schemaVersion":"1.0"}
 {"id":"01","hostname":"ec2-54-191-01","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
-{"id":"02","hostname":"ec2-54-191-02","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
-{"id":"03","hostname":"ec2-54-191-03","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
-{"id":"04","hostname":"ec2-54-191-04","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
-{"id":"05","hostname":"ec2-54-191-05","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"02","hostname":"ec2-54-191-05","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"03","hostname":"ec2-54-191-04","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"04","hostname":"ec2-54-191-03","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
+{"id":"05","hostname":"ec2-54-191-02","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":"d3aa045f71bf4d1dffd2c5f485a4bc1d"}
 {"id":"06","hostname":"ec2-54-191-06","privateKey":"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop","publicKey":""}

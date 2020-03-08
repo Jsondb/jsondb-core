@@ -233,7 +233,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       logger.error("Some IO Exception reading the Json File {}", collectionFile.getName(), e);
       return null;
     } catch(Throwable t) {
-      logger.error("Throwable Caught ", collectionFile.getName(), t);
+      logger.error("Throwable Caught {}, {} ", collectionFile.getName(), t);
       return null;
     } finally {
       if (null != jr) {
@@ -560,9 +560,24 @@ public class JsonDBTemplate implements JsonDBOperations {
   /* (non-Javadoc)
    * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
    */
-  @SuppressWarnings("unchecked")
   @Override
   public <T> List<T> find(String jxQuery, String collectionName) {
+    return find(jxQuery, collectionName, null);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
+   */
+  @Override
+  public <T> List<T> find(String jxQuery, Class<T> entityClass, Comparator<? super T> comparator) {
+    return find(jxQuery, Util.determineCollectionName(entityClass), comparator);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
+   */
+  @Override
+  public <T> List<T> find(String jxQuery, String collectionName, Comparator<? super T> comparator) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
     if((null == cmd) || (null == collection)) {
@@ -580,6 +595,11 @@ public class JsonDBTemplate implements JsonDBOperations {
           CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
         }
         newCollection.add((T) obj);
+      }
+      if (comparator != null) {
+        // It is tempting to attempt to sort the obejcts in the while loop above, but it has no real benefit
+        // See: https://stackoverflow.com/questions/24136930/sort-while-inserting-or-copy-and-sort
+        newCollection.sort(comparator);
       }
       return newCollection;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {

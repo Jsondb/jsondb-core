@@ -168,13 +168,13 @@ public class UpsertTests {
     Instance instance1 = jsonDBTemplate.findById("03", Instance.class);
     assertNotNull(instance1);
     assertEquals("03", instance1.getId());
-    assertEquals("ec2-54-191-03", instance1.getHostname());
+    assertEquals("ec2-54-191-04", instance1.getHostname());
     assertEquals("b87eb02f5dd7e5232d7b0fc30a5015e4", instance1.getPrivateKey());
     assertEquals("d3aa045f71bf4d1dffd2c5f485a4bc1d", instance1.getPublicKey());
 
     Instance instance2 = new Instance();
     instance2.setId("03");
-    instance2.setHostname("ec2-54-191-03_Updated");
+    instance2.setHostname("ec2-54-191-04_Updated");
     instance2.setPrivateKey("SavingPrivateRyan");
     instance2.setPublicKey("VeryPublic");
     jsonDBTemplate.upsert(instance2);
@@ -182,7 +182,7 @@ public class UpsertTests {
     Instance instance3 = jsonDBTemplate.findById("03", Instance.class);
     assertNotNull(instance3);
     assertEquals("03", instance3.getId());
-    assertEquals("ec2-54-191-03_Updated", instance3.getHostname());
+    assertEquals("ec2-54-191-04_Updated", instance3.getHostname());
     assertEquals("SavingPrivateRyan", instance3.getPrivateKey());
     assertEquals("VeryPublic", instance3.getPublicKey());
   }
