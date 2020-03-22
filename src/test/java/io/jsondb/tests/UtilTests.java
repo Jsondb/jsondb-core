@@ -21,6 +21,7 @@
 package io.jsondb.tests;
 
 import java.io.File;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
@@ -33,6 +34,8 @@ import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.tests.model.PojoForPrivateGetIdTest;
 import io.jsondb.tests.model.PojoForPrivateSetIdTest;
+
+import static org.junit.Assert.*;
 
 /**
  * A unit test class for methods in Util class
@@ -85,5 +88,139 @@ public class UtilTests {
     
     PojoForPrivateSetIdTest s = new PojoForPrivateSetIdTest();
     jsonDBTemplate.insert(s);
+  }
+
+  @Test
+  public void test_getSliceIndexes_Nulls() {
+    List<Integer> indexes = null;
+
+    indexes = Util.getSliceIndexes(null, 3);
+    assertNull(indexes);
+
+    indexes = Util.getSliceIndexes("", 5);
+    assertNull(indexes);
+
+    indexes = Util.getSliceIndexes(":", 5);
+    assertNull(indexes);
+
+    indexes = Util.getSliceIndexes("::", 5);
+    assertNull(indexes);
+
+    indexes = Util.getSliceIndexes("2", 0);
+    assertNull(indexes);
+  }
+
+  @Test
+  public void test_getSliceIndexes_PositiveDefaults() {
+    List<Integer> indexes = null;
+
+    indexes = Util.getSliceIndexes("::2", 5);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{0,2,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes(":5", 7);
+    assertNotNull(indexes);
+    assertEquals(5, indexes.size());
+    assertArrayEquals(new Integer[]{0,1,2,3,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes(":5:", 7);
+    assertNotNull(indexes);
+    assertEquals(5, indexes.size());
+    assertArrayEquals(new Integer[]{0,1,2,3,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes(":5:2", 7);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{0,2,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("1", 5);
+    assertNotNull(indexes);
+    assertEquals(4, indexes.size());
+    assertArrayEquals(new Integer[]{1,2,3,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("2:", 5);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{2,3,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("2::", 5);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{2,3,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes(":2", 5);
+    assertNotNull(indexes);
+    assertEquals(2, indexes.size());
+    assertArrayEquals(new Integer[]{0,1}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("2::2", 7);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{2,4,6}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("2:5:", 7);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{2,3,4}, indexes.toArray());
+  }
+
+  @Test
+  public void test_getSliceIndexes_NegativeDefaults() {
+    List<Integer> indexes = null;
+
+    indexes = Util.getSliceIndexes("::-1", 5);
+    assertNotNull(indexes);
+    assertEquals(5, indexes.size());
+    assertArrayEquals(new Integer[]{4,3,2,1,0}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("::-2", 5);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{4,2,0}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("-2:10", 10);
+    assertNotNull(indexes);
+    assertEquals(2, indexes.size());
+    assertArrayEquals(new Integer[]{8,9}, indexes.toArray());
+  }
+
+  @Test
+  public void test_getSliceIndexes_PositiveSlice() {
+    List<Integer> indexes = null;
+
+    indexes = Util.getSliceIndexes("0:7:3", 7);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{0,3,6}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("0:7:2", 5);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{0,2,4}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("4:3:1", 7);
+    assertNotNull(indexes);
+    assertEquals(0, indexes.size());
+  }
+
+  @Test
+  public void test_getSliceIndexes_NegativeSlice() {
+    List<Integer> indexes = null;
+
+    indexes = Util.getSliceIndexes("-1:-4:-1", 6);
+    assertNotNull(indexes);
+    assertEquals(3, indexes.size());
+    assertArrayEquals(new Integer[]{5,4,3}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("-1:-5:-2", 6);
+    assertNotNull(indexes);
+    assertEquals(2, indexes.size());
+    assertArrayEquals(new Integer[]{5,3}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("-3:3:-1", 10);
+    assertNotNull(indexes);
+    assertEquals(4, indexes.size());
+    assertArrayEquals(new Integer[]{7,6,5,4}, indexes.toArray());
   }
 }

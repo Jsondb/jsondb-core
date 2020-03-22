@@ -31,13 +31,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.text.ParseException;
+import java.util.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
@@ -252,5 +247,189 @@ public class Util {
         delete(c);
     }
     f.delete();
+  }
+
+  /**
+   * A utility method to determine the default value to be assigned to i  when it is not specified based on the value of k
+   * If i is not given it defaults to 0 for k&gt;0 and n-1 for k&lt;0, where n is number elements in slice_target.
+   *
+   * @param k actual value of k parsed from slice string
+   * @param n number of elements in slice_target
+   * @return default value for i
+   */
+  private static int getDefaultIByK(int k, int n) {
+    if (k > 0) {
+      return 0;
+    } else if ( k < 0) {
+      return n-1;
+    } else {
+      throw new IllegalArgumentException("Illegal argument, expected k != 0");
+    }
+  }
+
+  /**
+   * A utility method to determine the default value to be assigned to j when it is not specified based on the value of k
+   * If j is not given it defaults to n for k&gt;0 and -n-1 for k&lt;0, where n is number elements in slice_target.
+   *
+   * @param k actual value of k parsed from slice string
+   * @param n number of elements in slice_target
+   * @return default value for j
+   */
+  private static int getDefaultJByK(int k, int n) {
+    if (k > 0) {
+      return n;
+    } else if ( k < 0) {
+      return -n-1;
+    } else {
+      throw new IllegalArgumentException("Illegal argument, expected k != 0");
+    }
+  }
+
+  /**
+   * A private utility method used to parse the i|j from part of slice string. If i or j is negative
+   * it is adjusted to n+i or n+j.
+   * where n is number elements in slice_target
+   *
+   * @param part a non-null non-empty integer part string
+   * @param n number of elements in slice_target
+   * @return the parsed integer value, adjusted appropriately if its negative
+   * @throws IllegalArgumentException a exception of the part string is not a valid number
+   */
+  private static int parsePartIJ(String part, int n) throws IllegalArgumentException {
+    part = part.trim();
+    if (part.length() > 0) {
+      try {
+        int p = Integer.parseInt(part);
+        if (p < 0) {
+          p += n;
+        }
+        return p;
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Illegal slice argument, expected a integer representing i in i:j:k");
+      }
+    } else {
+      throw new IllegalArgumentException("Illegal slice argument, expected a integer representing i in i:j:k");
+    }
+  }
+
+  /**
+   * A private utility method used to parse the k from part of slice string.
+   *
+   * @param part a non-null integer part string
+   * @param def value to assign to k if none can be parsed out
+   * @return the parsed or the default k value
+   * @throws IllegalArgumentException a exception of the part string is not a valid number
+   */
+  private static int parsePartK(String part, int def) throws IllegalArgumentException {
+    part = part.trim();
+    if (part.length() > 0) {
+      try {
+        return Integer.parseInt(part);
+      } catch (NumberFormatException e) {
+        throw new IllegalArgumentException("Illegal slice argument, expected format is i:j:k");
+      }
+    }
+    return def;
+  }
+
+  /**
+   * Utility method to compute the indexes to select based on slice string
+   * @param slice select the indices in some slice_target list or array. The behaviour of this slicing feature is similar to
+   *              the slicing feature in python or numpy, as much as possible
+   *              https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+   *
+   *              A slice is a string notation and the basic slice syntax is i:j:k, where i is the starting index,
+   *              j is the stopping index, and k is the step (k != 0). In other words it is start:stop:step
+   *              Example slice_target = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "1:7:2" returns [T1, T3, T5]
+   *
+   *              i is inclusive, j is exclusive
+   *
+   *              Negative i and j are interpreted as n + i and n + j where n is the number of elements found. Negative
+   *              k makes stepping go towards smaller indices.
+   *              Example slice_target = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "-2:10" returns [T8, T9]
+   *                      slice = "-3:3:-1" returns [T7, T6, T5, T4]
+   *
+   *              Assume n is the number of elements in slice_target. Then, if i is not given it defaults to 0
+   *              for k&gt;0 and n - 1 for k&lt;0 . If j is not given it defaults to n for k&gt;0 and -n-1 for k&lt;0 .
+   *              If k is not given it defaults to 1. Note that :: is the same as : and means select all indices
+   *              from slice_target.
+   *              Example slice_target = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "5:" returns [T5, T6, T7, T8, T9]
+   *
+   *              Assume n is the number of elements in slice_target. Then, if j&gt;n then it is considered as n, in case
+   *              of negative j it is considered -n.
+   * @param size size of the array from which a slice is to extracted
+   * @return List of indexes to pick from the array to be returned
+   */
+  public static List<Integer> getSliceIndexes(String slice, int size) {
+    if (slice == null || slice.length() < 1 || slice.equals(":") || slice.equals("::") || size < 1) {
+      return null;
+    }
+
+    int i=0,j=0,k = 0;
+
+    String[] parts = slice.split(":");
+    if (parts.length > 3) {
+      throw new IllegalArgumentException("Illegal slice argument, expected format is i:j:k");
+    }
+    if (slice.startsWith("::")) {
+      k = parsePartK(parts[2], 1);
+      i = getDefaultIByK(k, size);
+      j = getDefaultJByK(k, size);
+    } else if (slice.startsWith(":")) {
+      if (parts.length == 2) {
+        j = parsePartIJ(parts[1], size);
+        k = 1;
+        i = getDefaultIByK(k, size);
+      } else if (parts.length == 3) {
+        j = parsePartIJ(parts[1], size);
+        k = parsePartK(parts[2], 1);
+        i = getDefaultIByK(k, size);
+      }
+    } else {
+      if (parts.length == 1) {
+        i = parsePartIJ(parts[0], size);
+        k = 1;
+        j = getDefaultJByK(k, size);
+      } else if (parts.length == 2) {
+        i = parsePartIJ(parts[0], size);
+        j = parsePartIJ(parts[1], size);
+        k = 1;
+      } else if (parts.length == 3) {
+        k = parsePartK(parts[2], 1);
+        if (parts[0].length() > 0) {
+          i = parsePartIJ(parts[0], size);
+        } else {
+          i = getDefaultIByK(k, size);
+        }
+        if (parts[1].length() > 0) {
+          j = parsePartIJ(parts[1], size);
+        } else {
+          j = getDefaultJByK(k, size);
+        }
+      }
+    }
+
+    List<Integer> indexes = new ArrayList<>();
+    if (k == 0) {
+      throw new IllegalArgumentException("Illegal slice argument, k cannot be zero");
+    } else if (k > 0) {
+      int m = i;
+      int n = j;
+      while (m < n && m < size) { //Second condition prevents ArrayIndexOutOfBounds
+        indexes.add(m);
+        m += k;
+      }
+    } else if (k < 0) {
+      int m = i;
+      int n = j;
+      while (m > n && m > -1) { //Second condition prevents ArrayIndexOutOfBounds
+        indexes.add(m);
+        m += k;
+      }
+    }
+    return indexes;
   }
 }
