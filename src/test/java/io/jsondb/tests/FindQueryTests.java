@@ -290,5 +290,67 @@ public class FindQueryTests {
     assertEquals(instances.get(4).getHostname(), "ec2-54-191-02");
     assertEquals(instances.get(5).getHostname(), "ec2-54-191-01");
   }
+
+  /**
+   * a test that demonstrates how to find while using sorting and slicing
+   */
+  @Test
+  public void testFindQuery_AndSortAndSlice() {
+    String jxQuery = "."; //XPATH for all elements in a collection
+    Comparator<Instance> comparator = new Comparator<Instance>() {
+      @Override
+      public int compare(Instance o1, Instance o2) {
+        return (o1.getHostname().compareTo(o2.getHostname()));
+      }
+    };
+    List<Instance> instances = jsonDBTemplate.find(jxQuery, Instance.class, comparator, ":5:2");
+    assertEquals(instances.size(), 3);
+    assertEquals(instances.get(0).getHostname(), "ec2-54-191-01");
+    assertEquals(instances.get(1).getHostname(), "ec2-54-191-03");
+    assertEquals(instances.get(2).getHostname(), "ec2-54-191-05");
+
+    List<Instance> instances2 = jsonDBTemplate.find(jxQuery, Instance.class, comparator, ":5:2");
+    assertEquals(instances2.size(), 3);
+    assertEquals(instances2.get(0).getHostname(), "ec2-54-191-01");
+    assertEquals(instances2.get(1).getHostname(), "ec2-54-191-03");
+    assertEquals(instances2.get(2).getHostname(), "ec2-54-191-05");
+    //Check deep copy is indeed working
+    assertNotEquals(instances.get(0), instances2.get(0));
+    assertNotEquals(instances.get(1), instances2.get(1));
+    assertNotEquals(instances.get(2), instances2.get(2));
+
+    instances = jsonDBTemplate.find(jxQuery, Instance.class, comparator, "::-2");
+    assertEquals(instances.size(), 3);
+    assertEquals(instances.get(0).getHostname(), "ec2-54-191-06");
+    assertEquals(instances.get(1).getHostname(), "ec2-54-191-04");
+    assertEquals(instances.get(2).getHostname(), "ec2-54-191-02");
+
+    //This is double reverse test.
+    instances = jsonDBTemplate.find(jxQuery, Instance.class, comparator.reversed(), "::-2");
+    assertEquals(instances.size(), 3);
+    assertEquals(instances.get(0).getHostname(), "ec2-54-191-01");
+    assertEquals(instances.get(1).getHostname(), "ec2-54-191-03");
+    assertEquals(instances.get(2).getHostname(), "ec2-54-191-05");
+  }
+
+  /**
+   * a test that demonstrates how to find while using slicing without sorting
+   */
+  @Test
+  public void testFindQuery_AndSlice() {
+    String jxQuery = "."; //XPATH for all elements in a collection
+
+    List<Instance> instances = jsonDBTemplate.find(jxQuery, Instance.class, null, ":5:2");
+    assertEquals(instances.size(), 3);
+    assertEquals(instances.get(0).getHostname(), "ec2-54-191-01");
+    assertEquals(instances.get(1).getHostname(), "ec2-54-191-04");
+    assertEquals(instances.get(2).getHostname(), "ec2-54-191-02");
+
+    instances = jsonDBTemplate.find(jxQuery, Instance.class, null, "::-2");
+    assertEquals(instances.size(), 3);
+    assertEquals(instances.get(0).getHostname(), "ec2-54-191-06");
+    assertEquals(instances.get(1).getHostname(), "ec2-54-191-03");
+    assertEquals(instances.get(2).getHostname(), "ec2-54-191-05");
+  }
 }
 

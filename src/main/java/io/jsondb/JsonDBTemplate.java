@@ -578,28 +578,64 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public <T> List<T> find(String jxQuery, String collectionName, Comparator<? super T> comparator) {
+    return find(jxQuery, collectionName, comparator, null);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
+   */
+  @Override
+  public <T> List<T> find(String jxQuery, Class<T> entityClass, Comparator<? super T> comparator, String slice) {
+    return find(jxQuery, Util.determineCollectionName(entityClass), comparator, slice);
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#find(java.lang.String, java.lang.String)
+   */
+  @Override
+  public <T> List<T> find(String jxQuery, String collectionName, Comparator<? super T> comparator, String slice) {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
     if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     cmd.getCollectionLock().readLock().lock();
+    boolean isSliceable = Util.isSliceable(slice);
     try {
       JXPathContext context = contextsRef.get().get(collectionName);
       Iterator<T> resultItr = context.iterate(jxQuery);
       List<T> newCollection = new ArrayList<T>();
       while (resultItr.hasNext()) {
         T document = resultItr.next();
-        Object obj = Util.deepCopy(document);
-        if(encrypted && cmd.hasSecret() && null != obj) {
-          CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+        if (isSliceable) {
+          //Since slicing is enabled we defer the deepcopy and decryption to later stage.
+          newCollection.add(document);
+        } else {
+          Object obj = Util.deepCopy(document);
+          if (encrypted && cmd.hasSecret() && null != obj) {
+            CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+          }
+          newCollection.add((T) obj);
         }
-        newCollection.add((T) obj);
       }
       if (comparator != null) {
-        // It is tempting to attempt to sort the obejcts in the while loop above, but it has no real benefit
+        // It is tempting to attempt to sort the objects in the while loop above, but it has no real benefit
         // See: https://stackoverflow.com/questions/24136930/sort-while-inserting-or-copy-and-sort
         newCollection.sort(comparator);
+      }
+      if (isSliceable) {
+        List<Integer> indexes = Util.getSliceIndexes(slice, newCollection.size());
+        if (indexes != null) {
+          List<T> slicedCollection = new ArrayList<T>(indexes.size());
+          for (int index : indexes) {
+            Object obj = Util.deepCopy(newCollection.get(index));
+            if (encrypted && cmd.hasSecret() && null != obj) {
+              CryptoUtil.decryptFields(obj, cmd, dbConfig.getCipher());
+            }
+            slicedCollection.add((T) obj);
+          }
+          return slicedCollection;
+        }
       }
       return newCollection;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {

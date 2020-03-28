@@ -231,6 +231,108 @@ public interface JsonDBOperations {
   <T> List<T> find(String jxQuery, String collectionName, Comparator<? super T> comparator);
 
   /**
+   * Map the results of an ad-hoc query on the specified collection to a List of the specified type.
+   *
+   * The objects in result are sorted according to the order induced by the specified comparator.
+   * All elements in the array must be mutually comparable by the specified comparator (that is, c.compare(e1, e2)
+   * must not throw a ClassCastException for any elements e1 and e2 in the array).
+   *
+   * @param jxQuery a XPATH query expression
+   * @param entityClass the parameterized type of the returned list.
+   * @param comparator Comparator to use for sorting the objects
+   *                   Note: If sorting along with slicing is used then sorting over fields with the 'secret' anotation
+   *                   will actually sort the raw encrypted field value, which will be undesirable and probably useless,
+   *                   this limitation is for efficiency reasons, when slicing is enabled we defer the deep copy and
+   *                   decryption of secret fields until a later stage (which happens after sorting), assuming quite
+   *                   some objects may not be selected due to slicing
+   *
+   *                   However if slicing is not used then the sorting will sort over unencrypted field value.
+   *
+   * @param slice select the indices to return from the find_result. The behaviour of this slicing feature is similar to
+   *              the slicing feature in python or numpy, as much as possible
+   *              https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+   *
+   *              A slice is a string notation and the basic slice syntax is i:j:k, where i is the starting index,
+   *              j is the stopping index, and k is the step (k != 0). In other words it is start:stop:step
+   *              Example find_result = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "1:7:2" returns [T1, T3, T5]
+   *
+   *              i is inclusive, j is exclusive
+   *
+   *              Negative i and j are interpreted as n + i and n + j where n is the number of elements found. Negative
+   *              k makes stepping go towards smaller indices.
+   *              Example find_result = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "-2:10" returns [T8, T9]
+   *                      slice = "-3:3:-1" returns [T7, T6, T5, T4]
+   *
+   *              Assume n is the number of elements in find_result. Then, if i is not given it defaults to 0
+   *              for k&gt;0 and n - 1 for k&lt;0 . If j is not given it defaults to n for k&gt;0 and -n-1 for k&lt;0
+   *              If k is not given it defaults to 1. Note that :: is the same as : and means select all indices
+   *              from find_result.
+   *              Example find_result = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "5:" returns [T5, T6, T7, T8, T9]
+   *
+   *              Assume n is the number of elements in find_result. Then, if j&gt;n then it is considered as n, in case
+   *              of negative j it is considered -n.
+   *
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the list of found objects
+   */
+  <T> List<T> find(String jxQuery, Class<T> entityClass, Comparator<? super T> comparator, String slice);
+
+  /**
+   * Map the results of an ad-hoc query on the specified collection to a List of the specified type.
+   *
+   * The objects in result are sorted according to the order induced by the specified comparator.
+   * All elements in the array must be mutually comparable by the specified comparator (that is, c.compare(e1, e2)
+   * must not throw a ClassCastException for any elements e1 and e2 in the array).
+   *
+   * @param jxQuery a XPATH query expression
+   * @param collectionName name of the collection to retrieve the objects from
+   * @param comparator Comparator to use for sorting the objects
+   *                   Note: If sorting along with slicing is used then sorting over fields with the 'secret' anotation
+   *                   will actually sort the raw encrypted field value, which will be undesirable and probably useless,
+   *                   this limitation is for efficiency reasons, when slicing is enabled we defer the deep copy and
+   *                   decryption of secret fields until a later stage (which happens after sorting), assuming quite
+   *                   some objects may not be selected due to slicing
+   *
+   *                   However if slicing is not used then the sorting will sort over unencrypted field value.
+   *
+   * @param slice select the indices to return from the find_result. The behaviour of this slicing feature is similar to
+   *              the slicing feature in python or numpy, as much as possible
+   *              https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
+   *
+   *              A slice is a string notation and the basic slice syntax is i:j:k, where i is the starting index,
+   *              j is the stopping index, and k is the step (k != 0). In other words it is start:stop:step
+   *              Example find_result = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "1:7:2" returns [T1, T3, T5]
+   *
+   *              i is inclusive, j is exclusive
+   *
+   *              Negative i and j are interpreted as n + i and n + j where n is the number of elements found. Negative
+   *              k makes stepping go towards smaller indices.
+   *              Example find_result = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "-2:10" returns [T8, T9]
+   *                      slice = "-3:3:-1" returns [T7, T6, T5, T4]
+   *
+   *              Assume n is the number of elements in find_result. Then, if i is not given it defaults to 0
+   *              for k&gt;0 and n - 1 for k&lt;0 . If j is not given it defaults to n for k&gt;0 and -n-1 for k&lt;0
+   *              If k is not given it defaults to 1. Note that :: is the same as : and means select all indices
+   *              from find_result.
+   *              Example find_result = [T0, T1, T2, T3, T4, T5, T6, T7, T8, T9]
+   *                      slice = "5:" returns [T5, T6, T7, T8, T9]
+   *
+   *              Assume n is the number of elements in find_result. Then, if j&gt;n then it is considered as n, in case
+   *              of negative j it is considered -n.
+   *
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the list of found objects
+   */
+  <T> List<T> find(String jxQuery, String collectionName, Comparator<? super T> comparator, String slice);
+
+  /**
    * Query for a list of objects of type T from the specified collection.
    *
    * @param entityClass the parameterized type of the returned list.
