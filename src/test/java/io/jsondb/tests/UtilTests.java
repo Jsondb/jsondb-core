@@ -91,6 +91,38 @@ public class UtilTests {
   }
 
   @Test
+  public void test_IllegalSliceText_1() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Illegal slice argument, expected format is i:j:k");
+
+    Util.getSliceIndexes("1:2:3:4", 2);
+  }
+
+  @Test
+  public void test_IllegalSliceText_2() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Illegal slice argument, expected format is i:j:k");
+
+    Util.getSliceIndexes("1:2::4", 2);
+  }
+
+  @Test
+  public void test_IllegalSliceText_3() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Illegal slice argument, expected format is i:j:k");
+
+    Util.getSliceIndexes(":::4", 2);
+  }
+
+  @Test
+  public void test_IllegalSliceText_4() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("Illegal slice argument, k cannot be zero");
+
+    Util.getSliceIndexes("1:2:0", 2);
+  }
+
+  @Test
   public void test_getSliceIndexes_Nulls() {
     List<Integer> indexes = null;
 
@@ -183,6 +215,11 @@ public class UtilTests {
     assertNotNull(indexes);
     assertEquals(2, indexes.size());
     assertArrayEquals(new Integer[]{8,9}, indexes.toArray());
+
+    indexes = Util.getSliceIndexes("-1", 5);
+    assertNotNull(indexes);
+    assertEquals(1, indexes.size());
+    assertArrayEquals(new Integer[]{4}, indexes.toArray());
   }
 
   @Test

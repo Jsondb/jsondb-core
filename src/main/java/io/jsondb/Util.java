@@ -332,9 +332,18 @@ public class Util {
     return def;
   }
 
+  public static boolean isSliceable(String slice) {
+    if (slice == null || slice.length() < 1 || slice.equals(":") || slice.equals("::")) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Utility method to compute the indexes to select based on slice string
-   * @param slice select the indices in some slice_target list or array. The behaviour of this slicing feature is similar to
+   * @param slice select the indices in some slice_target list or array, should be a valid slice string
+   *
+   *              The behaviour of this slicing feature is similar to
    *              the slicing feature in python or numpy, as much as possible
    *              https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html
    *
@@ -364,7 +373,8 @@ public class Util {
    * @return List of indexes to pick from the array to be returned
    */
   public static List<Integer> getSliceIndexes(String slice, int size) {
-    if (slice == null || slice.length() < 1 || slice.equals(":") || slice.equals("::") || size < 1) {
+
+    if (!isSliceable(slice) || size < 1) {
       return null;
     }
 
