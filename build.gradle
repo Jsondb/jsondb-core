@@ -171,5 +171,15 @@ def getVersionName() {
     standardOutput = stdout
   }
   def versionString = stdout.toString().replaceFirst("-", ".");
-  return versionString.substring(0, versionString.indexOf("-"));
+  versionString = versionString.substring(0, versionString.indexOf("-"));
+
+  if (JavaVersion.current().isJava8()) {
+    versionString = versionString + '-j8'
+  } else if (JavaVersion.current().isJava11()){
+    versionString = versionString + '-j11'
+  } else {
+    assert 'Only build with Java LTS version'
+  }
+
+  return versionString
 }
