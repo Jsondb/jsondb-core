@@ -560,6 +560,16 @@ public interface JsonDBOperations {
    * Remove the given object from the collection by id.
    *
    * @param objectToRemove  the object to remove from the collection
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return  the object that was actually removed or null
+   */
+  <T> T remove(Object objectToRemove);
+
+  /**
+   * Remove the given object from the collection by id.
+   *
+   * @param objectToRemove  the object to remove from the collection
    * @param entityClass  class that determines the collection to use
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage

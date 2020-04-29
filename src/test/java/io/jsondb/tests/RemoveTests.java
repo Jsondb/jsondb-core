@@ -142,7 +142,7 @@ public class RemoveTests {
    * Test to remove a single object from a collection
    */
   @Test
-  public void testRemove_ValidObject() {
+  public void testRemove_ValidObjectWithClass() {
     List<Instance> instances = jsonDBTemplate.getCollection(Instance.class);
     int size = instances.size();
 
@@ -150,6 +150,26 @@ public class RemoveTests {
     instance.setId("05");
 
     Instance removedObject = jsonDBTemplate.remove(instance, Instance.class);
+
+    instances = jsonDBTemplate.getCollection(Instance.class);
+    assertNotNull(instances);
+    assertEquals(size-1, instances.size());
+    assertNotNull(removedObject);
+    assertEquals("05", removedObject.getId());
+  }
+
+  /**
+   * Test to remove a single object from a collection
+   */
+  @Test
+  public void testRemove_ValidObjectWithoutClass() {
+    List<Instance> instances = jsonDBTemplate.getCollection(Instance.class);
+    int size = instances.size();
+
+    Instance instance = new Instance();
+    instance.setId("05");
+
+    Instance removedObject = jsonDBTemplate.remove(instance);
 
     instances = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(instances);

@@ -1002,6 +1002,14 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
 
   /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#remove(java.lang.Object)
+   */
+  @Override
+  public <T> T remove(Object objectToRemove) {
+    return remove(objectToRemove, Util.determineEntityCollectionName(objectToRemove));
+  }
+
+  /* (non-Javadoc)
    * @see org.jsondb.JsonDBOperations#remove(java.lang.Object, java.lang.Class)
    */
   @Override
