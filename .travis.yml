@@ -2,7 +2,7 @@ language: java
 dist: trusty
 
 git:
-  depth: 99999
+  depth: 3
 
 jdk:
   - oraclejdk8
