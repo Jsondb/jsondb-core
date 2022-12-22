@@ -11,15 +11,12 @@ Provides a Apache JxPath based query system.
 Visit http://jsondb.io for detailed information about Jsondb, Why Jsondb and Using Jsondb
 
 
-### JsonDB Users
 
-Send a [pull request](https://github.com/Jsondb/jsondb-core/blob/master/Readme.md) to add yours to the list.
 
-##### Applications using Jsondb
-* [Application Name](Application Url): Short description
+## Stargazers over time
 
-##### Libraries using Jsondb
-* [Library Name](Library Url): Short description
+[![Stargazers over time](https://starchart.cc/Jsondb/jsondb-core.svg)](https://starchart.cc/Jsondb/jsondb-core)
 
-##### Companies using Jsondb
-* [Company Name](Company Url)
+
+
+
