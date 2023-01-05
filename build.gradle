@@ -26,6 +26,8 @@ plugins {
 }
 
 apply plugin: "java"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 apply plugin: "jacoco"
 apply plugin: "eclipse"
 apply plugin: "signing"
