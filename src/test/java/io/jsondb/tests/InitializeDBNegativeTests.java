@@ -20,28 +20,24 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.Set;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import com.google.common.io.Files;
-
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
+import java.io.File;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Unit tests that cover all aspects of DB initialization
@@ -51,77 +47,72 @@ import io.jsondb.crypto.ICipher;
  */
 public class InitializeDBNegativeTests {
 
-  private String dbFilesLocation = "src/test/resources/dbfiles/dbInitializationTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File instancesJson = new File(dbFilesFolder, "instances.json");
-  
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+    private String dbFilesLocation = "src/test/resources/dbfiles/dbInitializationTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File instancesJson = new File(dbFilesFolder, "instances.json");
 
-  @Before
-  public void setup() throws IOException, GeneralSecurityException {
-    dbFilesFolder.mkdir();
-  }
-
-  @After
-  public void tearDown() {
-    Util.delete(dbFilesFolder);
-  }
-
-  /**
-   * A test to see if verify if JsonDB will get initialized when emtpy directory is passed.
-   */
-  @Test
-  public void testEmptyDBInitialization() {
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
-
-    Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
-    assertEquals(collectionNames.size(), 0);
-  }
-
-  /**
-   * A test to see if JsonDB will initialize when a non existing directory is passed
-   */
-  @Test
-  public void testMissingDBLocationInitialization_1() {
-    File someDbFilesFolder = new File(dbFilesLocation,  "someMissingFolder");
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.testmodel");
-
-    assertTrue(someDbFilesFolder.exists());
-    assertTrue(someDbFilesFolder.isDirectory());
-
-    Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
-    assertEquals(collectionNames.size(), 0);
-  }
-
-  /**
-   * A test to see if JsonDB will throw exception when passing non-creatable a non existing directory is passed
-   */
-  @Test
-  public void testMissingDBLocationInitialization_2() {
-    File someDbFilesFolder = new File(dbFilesLocation,  "someMissingFolder2");
-    try {
-      someDbFilesFolder.createNewFile();
-    } catch (IOException e) {
-      fail("Failed while creating temporary folder " + someDbFilesFolder.toString());
+    @BeforeEach
+    public void setup() throws IOException, GeneralSecurityException {
+        dbFilesFolder.mkdir();
     }
 
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Specified DbFiles directory is actually a file cannot use it as a directory");
+    @AfterEach
+    public void tearDown() {
+        Util.delete(dbFilesFolder);
+    }
 
-    new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.tests.model");
-  }
-  
-  @Test
-  public void testDBInitializationforMissingFile() throws IOException, GeneralSecurityException {
-    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
-    
-    assertTrue(jsonDBTemplate.collectionExists("instances"));
-    
-    instancesJson.delete();
-    jsonDBTemplate.reloadCollection("instances");
-    assertTrue(!jsonDBTemplate.collectionExists("instances"));
-  }
+    /**
+     * A test to see if verify if JsonDB will get initialized when emtpy directory is passed.
+     */
+    @Test
+    public void testEmptyDBInitialization() {
+        JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+
+        Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
+        assertEquals(collectionNames.size(), 0);
+    }
+
+    /**
+     * A test to see if JsonDB will initialize when a non existing directory is passed
+     */
+    @Test
+    public void testMissingDBLocationInitialization_1() {
+        File someDbFilesFolder = new File(dbFilesLocation, "someMissingFolder");
+        JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.testmodel");
+
+        assertTrue(someDbFilesFolder.exists());
+        assertTrue(someDbFilesFolder.isDirectory());
+
+        Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
+        assertEquals(collectionNames.size(), 0);
+    }
+
+    /**
+     * A test to see if JsonDB will throw exception when passing non-creatable a non existing directory is passed
+     */
+    @Test
+    public void testMissingDBLocationInitialization_2() {
+        File someDbFilesFolder = new File(dbFilesLocation, "someMissingFolder2");
+        try {
+            someDbFilesFolder.createNewFile();
+        } catch (IOException e) {
+            fail("Failed while creating temporary folder " + someDbFilesFolder.toString());
+        }
+
+        InvalidJsonDbApiUsageException exception = assertThrows(InvalidJsonDbApiUsageException.class, () -> new JsonDBTemplate(someDbFilesFolder.toString(), "org.jsondb.tests.model"));
+        assertEquals("Specified DbFiles directory is actually a file cannot use it as a directory", exception.getMessage());
+    }
+
+    @Test
+    public void testDBInitializationforMissingFile() throws IOException, GeneralSecurityException {
+        Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+        ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
+        JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
+
+        assertTrue(jsonDBTemplate.collectionExists("instances"));
+
+        instancesJson.delete();
+        jsonDBTemplate.reloadCollection("instances");
+        assertTrue(!jsonDBTemplate.collectionExists("instances"));
+    }
 }
