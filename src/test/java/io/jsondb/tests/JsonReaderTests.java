@@ -20,91 +20,81 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileChannel;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import com.google.common.io.Files;
-
 import io.jsondb.DefaultSchemaVersionComparator;
 import io.jsondb.JsonDBConfig;
 import io.jsondb.Util;
 import io.jsondb.io.JsonFileLockException;
 import io.jsondb.io.JsonReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for JsonReader IO utility class
+ * 
  * @version 1.0 11-Dec-2017
  */
 public class JsonReaderTests {
-  
-  private String dbFilesLocation = "src/test/resources/dbfiles/jsonReaderTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File instancesJson = new File(dbFilesFolder, "instances.json");
-  
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    dbFilesFolder.mkdir();
-    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-  }
 
-  @After
-  public void tearDown() throws Exception {
-    Util.delete(dbFilesFolder);
-  }
+    private String dbFilesLocation = "src/test/resources/dbfiles/jsonReaderTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File instancesJson = new File(dbFilesFolder, "instances.json");
 
-  @Test
-  public void testReadLine() throws IOException {
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
-        new DefaultSchemaVersionComparator());
-    
-    JsonReader jr = new JsonReader(dbConfig, instancesJson);
-    
-    assertNotNull(jr);
-    assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
-  }
-  
-  @Test
-  public void testLockException() throws IOException {
-    File lockFolder = new File(dbFilesLocation, "lock");
-    if (!lockFolder.exists()) {
-      lockFolder.mkdirs();
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeEach
+    public void setUp() throws Exception {
+        dbFilesFolder.mkdir();
+        Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
     }
-    File fileLockLocation = new File(lockFolder, "instances.json.lock");
-    RandomAccessFile raf = new RandomAccessFile(fileLockLocation, "rw");
-    raf.writeInt(0); //Will cause creation of the file
-    
-    FileChannel channel = raf.getChannel();
-    try {
-      channel.lock();
-    } catch (IOException e) {
-      //Ignore
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        Util.delete(dbFilesFolder);
     }
-    
-    expectedException.expect(JsonFileLockException.class);
-    expectedException.expectMessage("JsonReader failed to obtain a file lock for file " + fileLockLocation);
-    
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
-        new DefaultSchemaVersionComparator());
-    
-    @SuppressWarnings("unused")
-    JsonReader jr = new JsonReader(dbConfig, instancesJson);
-    raf.close();
-  }
+
+    @Test
+    public void testReadLine() throws IOException {
+        JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
+                new DefaultSchemaVersionComparator());
+
+        JsonReader jr = new JsonReader(dbConfig, instancesJson);
+
+        assertNotNull(jr);
+        assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
+    }
+
+    @Test
+    public void testLockException() throws IOException {
+        File lockFolder = new File(dbFilesLocation, "lock");
+        if (!lockFolder.exists()) {
+            lockFolder.mkdirs();
+        }
+        File fileLockLocation = new File(lockFolder, "instances.json.lock");
+        RandomAccessFile raf = new RandomAccessFile(fileLockLocation, "rw");
+        raf.writeInt(0); // Will cause creation of the file
+
+        FileChannel channel = raf.getChannel();
+        try {
+            channel.lock();
+        } catch (IOException e) {
+            // Ignore
+        }
+
+        JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false, new DefaultSchemaVersionComparator());
+
+        JsonFileLockException exception = assertThrows(JsonFileLockException.class, () -> new JsonReader(dbConfig, instancesJson));
+        assertEquals("JsonReader failed to obtain a file lock for file " + fileLockLocation, exception.getMessage());
+        raf.close();
+    }
 }

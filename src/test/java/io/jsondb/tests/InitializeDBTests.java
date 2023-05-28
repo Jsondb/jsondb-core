@@ -20,9 +20,13 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.io.Files;
+import io.jsondb.JsonDBTemplate;
+import io.jsondb.Util;
+import io.jsondb.crypto.DefaultAESCBCCipher;
+import io.jsondb.crypto.ICipher;
+import io.jsondb.tests.model.Instance;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -30,19 +34,12 @@ import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.Files;
-
-import io.jsondb.JsonDBTemplate;
-import io.jsondb.Util;
-import io.jsondb.crypto.DefaultAESCBCCipher;
-import io.jsondb.crypto.ICipher;
-import io.jsondb.tests.model.Instance;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests that cover all aspects of DB initialization
@@ -52,94 +49,94 @@ import io.jsondb.tests.model.Instance;
  */
 public class InitializeDBTests {
 
-  private ObjectMapper objectMapper = null;
+    private ObjectMapper objectMapper = null;
 
-  private String dbFilesLocation = "src/test/resources/dbfiles/initializationTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File instancesJson = new File(dbFilesFolder, "instances.json");
-  private ICipher cipher;
+    private String dbFilesLocation = "src/test/resources/dbfiles/initializationTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File instancesJson = new File(dbFilesFolder, "instances.json");
+    private ICipher cipher;
 
-  @Before
-  public void setup() throws IOException {
-    dbFilesFolder.mkdir();
-    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-    try {
-      cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
-    } catch (GeneralSecurityException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-    objectMapper = new ObjectMapper();
-  }
-
-  @After
-  public void tearDown() {
-    Util.delete(dbFilesFolder);
-  }
-
-  @Test
-  public void testInitialization() {
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
-
-    Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
-    assertTrue(collectionNames.contains("instances"));
-    assertEquals(collectionNames.size(), 1);
-  }
-
-  @Test
-  public void testReload() {
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
-
-    Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
-    assertTrue(collectionNames.contains("instances"));
-    List<Instance> instances = jsonDBTemplate.findAll(Instance.class);
-    int size = instances.size();
-
-    //Add more computers directly to the computers.json file.
-    List<Instance> instances1 = new ArrayList<Instance>();
-    for (int i = 0; i<10; i++) {
-      Instance inst = new Instance();
-      int id = 11 + i;
-      inst.setId(String.format("%02d", id));
-      inst.setHostname("ec2-54-191-" + id);
-      //Private key is encrypted form of: b87eb02f5dd7e5232d7b0fc30a5015e4
-      inst.setPrivateKey("Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop");
-      inst.setPublicKey("d3aa045f71bf4d1dffd2c5f485a4bc1d");
-      instances1.add(inst);
-    }
-    appendDirectlyToJsonFile(instances1, instancesJson);
-
-    jsonDBTemplate.reLoadDB();
-
-    collectionNames = jsonDBTemplate.getCollectionNames();
-    assertTrue(collectionNames.contains("instances"));
-    instances = jsonDBTemplate.findAll(Instance.class);
-    assertEquals(instances.size(), size+10);
-  }
-
-  private <T> boolean appendDirectlyToJsonFile(List<T> collectionData, File collectionFile) {
-
-    boolean retval = false;
-    FileWriter fw = null;
-    try {
-      fw = new FileWriter(collectionFile, true);
-      for (T row : collectionData) {
-        fw.write(objectMapper.writeValueAsString(row));
-        fw.write("\n");
-      }
-      retval = true;
-    } catch (IOException e) {
-      retval = false;
-      e.printStackTrace();
-    } finally {
-      if (null != fw) {
+    @BeforeEach
+    public void setup() throws IOException {
+        dbFilesFolder.mkdir();
+        Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
         try {
-          fw.close();
-        } catch (IOException e) {
-          // do nothing
+            cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
+        } catch (GeneralSecurityException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
-      }
+        objectMapper = new ObjectMapper();
     }
-    return retval;
-  }
+
+    @AfterEach
+    public void tearDown() {
+        Util.delete(dbFilesFolder);
+    }
+
+    @Test
+    public void testInitialization() {
+        JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+
+        Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
+        assertTrue(collectionNames.contains("instances"));
+        assertEquals(collectionNames.size(), 1);
+    }
+
+    @Test
+    public void testReload() {
+        JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", cipher);
+
+        Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
+        assertTrue(collectionNames.contains("instances"));
+        List<Instance> instances = jsonDBTemplate.findAll(Instance.class);
+        int size = instances.size();
+
+        // Add more computers directly to the computers.json file.
+        List<Instance> instances1 = new ArrayList<Instance>();
+        for (int i = 0; i < 10; i++) {
+            Instance inst = new Instance();
+            int id = 11 + i;
+            inst.setId(String.format("%02d", id));
+            inst.setHostname("ec2-54-191-" + id);
+            // Private key is encrypted form of: b87eb02f5dd7e5232d7b0fc30a5015e4
+            inst.setPrivateKey("Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop");
+            inst.setPublicKey("d3aa045f71bf4d1dffd2c5f485a4bc1d");
+            instances1.add(inst);
+        }
+        appendDirectlyToJsonFile(instances1, instancesJson);
+
+        jsonDBTemplate.reLoadDB();
+
+        collectionNames = jsonDBTemplate.getCollectionNames();
+        assertTrue(collectionNames.contains("instances"));
+        instances = jsonDBTemplate.findAll(Instance.class);
+        assertEquals(instances.size(), size + 10);
+    }
+
+    private <T> boolean appendDirectlyToJsonFile(List<T> collectionData, File collectionFile) {
+
+        boolean retval = false;
+        FileWriter fw = null;
+        try {
+            fw = new FileWriter(collectionFile, true);
+            for (T row : collectionData) {
+                fw.write(objectMapper.writeValueAsString(row));
+                fw.write("\n");
+            }
+            retval = true;
+        } catch (IOException e) {
+            retval = false;
+            e.printStackTrace();
+        } finally {
+            if (null != fw) {
+                try {
+                    fw.close();
+                } catch (IOException e) {
+                    // do nothing
+                }
+            }
+        }
+        return retval;
+    }
 }

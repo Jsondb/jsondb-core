@@ -20,52 +20,53 @@
  */
 package io.jsondb.tests;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBException;
 import io.jsondb.io.JsonFileLockException;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Dumb unit tests for some of the Exception classes
+ * 
  * @version 1.0 25-Oct-2016
  */
 public class ExceptionTests {
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  
-  @Test
-  public void testJsonfileLockException() throws JsonFileLockException {
-    expectedException.expect(JsonFileLockException.class);
-    expectedException.expectMessage("JsonReader failed to obtain a file lock for file");
-   
-    throw new JsonFileLockException("JsonReader failed to obtain a file lock for file", null);
-  }
-  
-  @Test
-  public void testJsonDBException1() throws JsonDBException {
-    expectedException.expect(JsonDBException.class);
-    expectedException.expectMessage("Some Exception");
-   
-    throw new JsonDBException("Some Exception");
-  }
-  
-  @Test
-  public void testJsonDBException2() throws JsonDBException {
-    expectedException.expect(JsonDBException.class);
-    expectedException.expectMessage("Some Exception");
-   
-    throw new JsonDBException("Some Exception", null);
-  }
-  
-  @Test
-  public void testInvalidJsonDbApiUsageException() throws InvalidJsonDbApiUsageException {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Some Invalid usage");
-   
-    throw new InvalidJsonDbApiUsageException("Some Invalid usage", null);
-  }
+    @Test
+    public void testJsonfileLockException() throws JsonFileLockException {
+        // expectedException.expect(JsonFileLockException.class);
+        // expectedException.expectMessage("JsonReader failed to obtain a file lock for file");
+
+        JsonFileLockException exception = assertThrows(JsonFileLockException.class, () -> {
+            throw new JsonFileLockException("JsonReader failed to obtain a file lock for file", null);
+        });
+        assertEquals("JsonReader failed to obtain a file lock for file", exception.getMessage());
+    }
+
+    @Test
+    public void testJsonDBException1() throws JsonDBException {
+        JsonDBException exception = assertThrows(JsonDBException.class, () -> {
+            throw new JsonDBException("Some Exception");
+        });
+        assertEquals("Some Exception", exception.getMessage());
+    }
+
+    @Test
+    public void testJsonDBException2() throws JsonDBException {
+        JsonDBException exception = assertThrows(JsonDBException.class, () -> {
+            throw new JsonDBException("Some Exception", null);
+        });
+        assertEquals("Some Exception", exception.getMessage());
+    }
+
+    @Test
+    public void testInvalidJsonDbApiUsageException() throws InvalidJsonDbApiUsageException {
+        InvalidJsonDbApiUsageException exception = assertThrows(InvalidJsonDbApiUsageException.class, () -> {
+            throw new InvalidJsonDbApiUsageException("Some Invalid usage", null);
+        });
+        assertEquals("Some Invalid usage", exception.getMessage());
+    }
 }

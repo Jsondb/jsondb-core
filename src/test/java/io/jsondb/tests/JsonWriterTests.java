@@ -20,62 +20,55 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertNotNull;
-
-import java.io.File;
-import java.io.IOException;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import com.google.common.io.Files;
-
 import io.jsondb.CollectionMetaData;
 import io.jsondb.DefaultSchemaVersionComparator;
 import io.jsondb.JsonDBConfig;
 import io.jsondb.Util;
 import io.jsondb.io.JsonWriter;
 import io.jsondb.tests.model.Instance;
+import java.io.File;
+import java.io.IOException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Unit tests for JsonWriter IO utility class
+ * 
  * @version 1.0 11-Dec-2017
  */
 public class JsonWriterTests {
-  
-  private String dbFilesLocation = "src/test/resources/dbfiles/jsonWriterTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File instancesJson = new File(dbFilesFolder, "instances.json");
-  
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    dbFilesFolder.mkdir();
-    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-  }
 
-  @After
-  public void tearDown() throws Exception {
-    Util.delete(dbFilesFolder);
-  }
+    private String dbFilesLocation = "src/test/resources/dbfiles/jsonWriterTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File instancesJson = new File(dbFilesFolder, "instances.json");
 
-  @Test
-  public void test() throws IOException {
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
-        new DefaultSchemaVersionComparator());
-    
-    CollectionMetaData cmd = new CollectionMetaData("instances", new Instance().getClass(), "1.0", null);
-    
-    JsonWriter jr = new JsonWriter(dbConfig, cmd, "instances", instancesJson);
-    
-    assertNotNull(jr);
-  }
+    /**
+     * @throws java.lang.Exception
+     */
+    @BeforeEach
+    public void setUp() throws Exception {
+        dbFilesFolder.mkdir();
+        Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        Util.delete(dbFilesFolder);
+    }
+
+    @Test
+    public void test() throws IOException {
+        JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
+                new DefaultSchemaVersionComparator());
+
+        CollectionMetaData cmd = new CollectionMetaData("instances", new Instance().getClass(), "1.0", null);
+
+        JsonWriter jr = new JsonWriter(dbConfig, cmd, "instances", instancesJson);
+
+        assertNotNull(jr);
+    }
 }

@@ -20,56 +20,53 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Set;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.io.Files;
-
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.tests.util.TestUtils;
+import java.io.File;
+import java.io.IOException;
+import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @version 1.0 19-Oct-2018
  */
 public class LoadInvalidJsonTests {
 
-  private String dbFilesLocation = "src/test/resources/dbfiles/loadInvalidJsonTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File instancesJson = new File(dbFilesFolder, "instances.json");
-  
-  @Before
-  public void setup() throws IOException {
-    dbFilesFolder.mkdir();
-    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
-  }
+    private String dbFilesLocation = "src/test/resources/dbfiles/loadInvalidJsonTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File instancesJson = new File(dbFilesFolder, "instances.json");
 
-  @After
-  public void tearDown() {
-    Util.delete(dbFilesFolder);
-  }
+    @BeforeEach
+    public void setup() throws IOException {
+        dbFilesFolder.mkdir();
+        Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+    }
 
-  /**
-   * A test to ensure JsonDB does not delete the source files when a exception occurs during loading
-   */
-  @Test
-  public void testLoadForInvalidJson() {
-    // The invalidJson has semicolon instead of a colon between the id attribute name and value
-    String invalidJson = "{\"id\"=\"07\",\"hostname\":\"ec2-54-191-07\",\"privateKey\":\"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop\",\"publicKey\":\"\"}";
-    
-    TestUtils.appendDirectToFile(instancesJson, invalidJson);
-    
-    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
-    Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
-    
-    assertEquals(collectionNames.size(), 0);
-    assertEquals(8, TestUtils.getNoOfLinesInFile(instancesJson));
-  }
+    @AfterEach
+    public void tearDown() {
+        Util.delete(dbFilesFolder);
+    }
+
+    /**
+     * A test to ensure JsonDB does not delete the source files when a exception occurs during loading
+     */
+    @Test
+    public void testLoadForInvalidJson() {
+        // The invalidJson has semicolon instead of a colon between the id attribute name and value
+        String invalidJson = "{\"id\"=\"07\",\"hostname\":\"ec2-54-191-07\",\"privateKey\":\"Zf9vl5K6WV6BA3eL7JbnrfPMjfJxc9Rkoo0zlROQlgTslmcp9iFzos+MP93GZqop\",\"publicKey\":\"\"}";
+
+        TestUtils.appendDirectToFile(instancesJson, invalidJson);
+
+        JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+        Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
+
+        assertEquals(collectionNames.size(), 0);
+        assertEquals(8, TestUtils.getNoOfLinesInFile(instancesJson));
+    }
 }

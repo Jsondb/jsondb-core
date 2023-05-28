@@ -1,26 +1,5 @@
-*.*~
-*.swp
+# Ignore Gradle project-specific cache directory
 .gradle
-*.log
-.DS_Store
 
-**/build/*
-
-**/.DS_Store
-
-**/bin/**/*.class
-
-#Eclipse Files
-**/.classpath
-**/.project
-**/.settings/*
-**/.springBeans
-
-#Ignore .gitignore from subdirectories
-*/.gitignore
-/bin/
-/.idea/
-*.iml
-*.ipr
-*.iws
-/out/
+# Ignore Gradle build output directory
+build

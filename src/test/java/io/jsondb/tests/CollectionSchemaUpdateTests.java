@@ -20,21 +20,7 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.util.Map;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-
 import com.google.common.io.Files;
-
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
@@ -45,146 +31,146 @@ import io.jsondb.query.ddl.IOperation;
 import io.jsondb.query.ddl.RenameOperation;
 import io.jsondb.tests.model.LoadBalancer;
 import io.jsondb.tests.util.TestUtils;
+import java.io.File;
+import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @version 1.0 25-Oct-2016
  */
 public class CollectionSchemaUpdateTests {
-  private String dbFilesLocation = "src/test/resources/dbfiles/collectionUpdateTests";
-  private File dbFilesFolder = new File(dbFilesLocation);
-  private File loadbalancerJson = new File(dbFilesFolder, "loadbalancer.json");
+    private String dbFilesLocation = "src/test/resources/dbfiles/collectionUpdateTests";
+    private File dbFilesFolder = new File(dbFilesLocation);
+    private File loadbalancerJson = new File(dbFilesFolder, "loadbalancer.json");
 
-  private JsonDBTemplate jsonDBTemplate = null;
-  
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+    private JsonDBTemplate jsonDBTemplate = null;
 
-  @Before
-  public void setUp() throws Exception {
-    dbFilesFolder.mkdir();
-    Files.copy(new File("src/test/resources/dbfiles/loadbalancer.json"), loadbalancerJson);
-    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", null, true, null);
-  }
+    @BeforeEach
+    public void setUp() throws Exception {
+        dbFilesFolder.mkdir();
+        Files.copy(new File("src/test/resources/dbfiles/loadbalancer.json"), loadbalancerJson);
+        jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", null, true, null);
+    }
 
-  @After
-  public void tearDown() throws Exception {
-    Util.delete(dbFilesFolder);
-  }
+    @AfterEach
+    public void tearDown() throws Exception {
+        Util.delete(dbFilesFolder);
+    }
 
-  @Test
-  public void test_RenameField() {
-    assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+    @Test
+    public void test_RenameField() {
+        assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
 
-    IOperation renOperation = new RenameOperation("admin");
-    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
-    
-    Map<String, IOperation> allUpdateOps = cu.getUpdateData();
-    assertEquals(1, allUpdateOps.size());
+        IOperation renOperation = new RenameOperation("admin");
+        CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
 
-    jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
+        Map<String, IOperation> allUpdateOps = cu.getUpdateData();
+        assertEquals(1, allUpdateOps.size());
 
-    assertFalse(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+        jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
 
-    String[] expectedLinesAtEnd = {
-        "{\"schemaVersion\":\"1.0\"}",
-        "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"admin\":\"admin\",\"osName\":null}",
-        "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"admin\":\"admin\",\"osName\":null}"};
+        assertFalse(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
 
-    TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
-  }
-  
-  @Test
-  public void test_AddDeleteField() {
-    assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+        String[] expectedLinesAtEnd = {
+                "{\"schemaVersion\":\"1.0\"}",
+                "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"admin\":\"admin\",\"osName\":null}",
+                "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"admin\":\"admin\",\"osName\":null}" };
 
-    IOperation addOperation = new AddOperation("mac", false);
-    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("osName", addOperation);
+        TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+    }
 
-    jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
+    @Test
+    public void test_AddDeleteField() {
+        assertTrue(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
 
-    assertFalse(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+        IOperation addOperation = new AddOperation("mac", false);
+        CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("osName", addOperation);
 
-    String[] expectedLinesAtEnd = {
-        "{\"schemaVersion\":\"1.0\"}",
-        "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":\"mac\"}",
-        "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":\"mac\"}"};
+        jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
 
-    TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
-  }
-  
-  @Test
-  public void test_OnlyDeleteField() {
-    assertTrue(jsonDBTemplate.isCollectionReadonly("loadbalancer"));
+        assertFalse(jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
 
-    IOperation delOperation = new DeleteOperation();
-    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("deletedField", delOperation);
+        String[] expectedLinesAtEnd = {
+                "{\"schemaVersion\":\"1.0\"}",
+                "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":\"mac\"}",
+                "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":\"mac\"}" };
 
-    jsonDBTemplate.updateCollectionSchema(cu, "loadbalancer");
+        TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+    }
 
-    assertFalse(jsonDBTemplate.isCollectionReadonly("loadbalancer"));
+    @Test
+    public void test_OnlyDeleteField() {
+        assertTrue(jsonDBTemplate.isCollectionReadonly("loadbalancer"));
 
-    String[] expectedLinesAtEnd = {
-        "{\"schemaVersion\":\"1.0\"}",
-        "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":null}",
-        "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":null}"};
+        IOperation delOperation = new DeleteOperation();
+        CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("deletedField", delOperation);
 
-    TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
-  }
-  
-  @Test
-  public void test_RenameInNonExistingCollection() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
-    
-    IOperation renOperation = new RenameOperation("admin");
-    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
+        jsonDBTemplate.updateCollectionSchema(cu, "loadbalancer");
 
-    jsonDBTemplate.updateCollectionSchema(cu, "sites");
-  }
-  
-  @Test
-  public void test_AddToNonExistingCollection() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
-    
-    IOperation addOperation = new AddOperation("mac", false);
-    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("osName", addOperation);
+        assertFalse(jsonDBTemplate.isCollectionReadonly("loadbalancer"));
 
-    jsonDBTemplate.updateCollectionSchema(cu, "sites");
-  }
-  
-  @Test
-  public void test_DeleteFromNonExistingCollection() {
-    expectedException.expect(InvalidJsonDbApiUsageException.class);
-    expectedException.expectMessage("Collection by name 'sites' not found. Create collection first");
-    
-    IOperation delOperation = new DeleteOperation();
-    CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("deletedField", delOperation);
+        String[] expectedLinesAtEnd = {
+                "{\"schemaVersion\":\"1.0\"}",
+                "{\"id\":\"001\",\"hostname\":\"eclb-54-01\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"002\",\"hostname\":\"eclb-54-02\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"003\",\"hostname\":\"eclb-54-03\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"004\",\"hostname\":\"eclb-54-04\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"005\",\"hostname\":\"eclb-54-05\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"006\",\"hostname\":\"eclb-54-06\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"007\",\"hostname\":\"eclb-54-07\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"008\",\"hostname\":\"eclb-54-08\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"009\",\"hostname\":\"eclb-54-09\",\"username\":\"admin\",\"osName\":null}",
+                "{\"id\":\"010\",\"hostname\":\"eclb-54-10\",\"username\":\"admin\",\"osName\":null}" };
 
-    jsonDBTemplate.updateCollectionSchema(cu, "sites");
-  }
+        TestUtils.checkLastLines(loadbalancerJson, expectedLinesAtEnd);
+    }
+
+    @Test
+    public void test_RenameInNonExistingCollection() {
+        IOperation renOperation = new RenameOperation("admin");
+        CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("username", renOperation);
+
+        InvalidJsonDbApiUsageException exception = assertThrows(InvalidJsonDbApiUsageException.class, () -> jsonDBTemplate.updateCollectionSchema(cu, "sites"));
+        assertEquals("Collection by name 'sites' not found. Create collection first.", exception.getMessage());
+    }
+
+    @Test
+    public void test_AddToNonExistingCollection() {
+        IOperation addOperation = new AddOperation("mac", false);
+        CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("osName", addOperation);
+
+        InvalidJsonDbApiUsageException exception = assertThrows(InvalidJsonDbApiUsageException.class, () -> jsonDBTemplate.updateCollectionSchema(cu, "sites"));
+        assertEquals("Collection by name 'sites' not found. Create collection first.", exception.getMessage());
+    }
+
+    @Test
+    public void test_DeleteFromNonExistingCollection() {
+        IOperation delOperation = new DeleteOperation();
+        CollectionSchemaUpdate cu = CollectionSchemaUpdate.update("deletedField", delOperation);
+
+        InvalidJsonDbApiUsageException exception = assertThrows(InvalidJsonDbApiUsageException.class, () -> jsonDBTemplate.updateCollectionSchema(cu, "sites"));
+    }
 }
