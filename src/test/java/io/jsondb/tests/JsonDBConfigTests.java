@@ -20,90 +20,90 @@
  */
 package io.jsondb.tests;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.nio.charset.Charset;
-
-import org.junit.Test;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.jsondb.DefaultSchemaVersionComparator;
 import io.jsondb.JsonDBConfig;
 import io.jsondb.crypto.ICipher;
+import java.io.File;
+import java.nio.charset.Charset;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @version 1.0 08-Oct-2016
  */
 public class JsonDBConfigTests {
 
-  private String dbFilesLocation = "src/test/resources/dbfiles/dbConfigTests";
+    private String dbFilesLocation = "src/test/resources/dbfiles/dbConfigTests";
 
-  @Test
-  public void testDbConfig() {
-    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
-        new DefaultSchemaVersionComparator());
+    @Test
+    public void testDbConfig() {
+        JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
+                new DefaultSchemaVersionComparator());
 
-    assertEquals("src/test/resources/dbfiles/dbConfigTests", dbConfig.getDbFilesLocationString());
-    assertEquals(new File("src/test/resources/dbfiles/dbConfigTests"), dbConfig.getDbFilesLocation());
-    assertEquals(new File("src/test/resources/dbfiles/dbConfigTests").toPath(), dbConfig.getDbFilesPath());
-    assertEquals(Charset.forName("UTF-8"), dbConfig.getCharset());
-    assertNull(dbConfig.getCipher());
-    assertFalse(dbConfig.isCompatibilityMode());
-    
-    dbConfig.setDbFilesLocationString("myfolder");
-    assertEquals("myfolder", dbConfig.getDbFilesLocationString());
-    assertEquals(new File("myfolder"), dbConfig.getDbFilesLocation());
-    assertEquals(new File("myfolder").toPath(), dbConfig.getDbFilesPath());
-    
-    Charset newCharset = Charset.forName("UTF-16");
-    dbConfig.setCharset(newCharset);
-    assertEquals(newCharset, dbConfig.getCharset());
-    
-    ICipher mCipher = new MyCipher();
-    dbConfig.setCipher(mCipher);
-    assertEquals(mCipher, dbConfig.getCipher());
-    
-    dbConfig.setBaseScanPackage("io.newpackage");
-    assertEquals("io.newpackage", dbConfig.getBaseScanPackage());
-    
-    ObjectMapper mapper = dbConfig.getObjectMapper();
-    assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
-    dbConfig.setCompatibilityMode(true);
-    assertFalse(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
-    dbConfig.setCompatibilityMode(false);
-    assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
-    
-    ObjectMapper newMapper = new ObjectMapper();
-    dbConfig.setObjectMapper(newMapper);
-    assertEquals(newMapper, dbConfig.getObjectMapper());
-  }
-  
-  
-  private class MyCipher implements ICipher {
+        assertEquals("src/test/resources/dbfiles/dbConfigTests", dbConfig.getDbFilesLocationString());
+        assertEquals(new File("src/test/resources/dbfiles/dbConfigTests"), dbConfig.getDbFilesLocation());
+        assertEquals(new File("src/test/resources/dbfiles/dbConfigTests").toPath(), dbConfig.getDbFilesPath());
+        assertEquals(Charset.forName("UTF-8"), dbConfig.getCharset());
+        assertNull(dbConfig.getCipher());
+        assertFalse(dbConfig.isCompatibilityMode());
 
-    /* (non-Javadoc)
-     * @see io.jsondb.crypto.ICipher#encrypt(java.lang.String)
-     */
-    @Override
-    public String encrypt(String plainText) {
-      // TODO Auto-generated method stub
-      return null;
+        dbConfig.setDbFilesLocationString("myfolder");
+        assertEquals("myfolder", dbConfig.getDbFilesLocationString());
+        assertEquals(new File("myfolder"), dbConfig.getDbFilesLocation());
+        assertEquals(new File("myfolder").toPath(), dbConfig.getDbFilesPath());
+
+        Charset newCharset = Charset.forName("UTF-16");
+        dbConfig.setCharset(newCharset);
+        assertEquals(newCharset, dbConfig.getCharset());
+
+        ICipher mCipher = new MyCipher();
+        dbConfig.setCipher(mCipher);
+        assertEquals(mCipher, dbConfig.getCipher());
+
+        dbConfig.setBaseScanPackage("io.newpackage");
+        assertEquals("io.newpackage", dbConfig.getBaseScanPackage());
+
+        ObjectMapper mapper = dbConfig.getObjectMapper();
+        assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+        dbConfig.setCompatibilityMode(true);
+        assertFalse(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+        dbConfig.setCompatibilityMode(false);
+        assertTrue(mapper.isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+
+        ObjectMapper newMapper = new ObjectMapper();
+        dbConfig.setObjectMapper(newMapper);
+        assertEquals(newMapper, dbConfig.getObjectMapper());
     }
 
-    /* (non-Javadoc)
-     * @see io.jsondb.crypto.ICipher#decrypt(java.lang.String)
-     */
-    @Override
-    public String decrypt(String cipherText) {
-      // TODO Auto-generated method stub
-      return null;
+    private class MyCipher implements ICipher {
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see io.jsondb.crypto.ICipher#encrypt(java.lang.String)
+         */
+        @Override
+        public String encrypt(String plainText) {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        /*
+         * (non-Javadoc)
+         * 
+         * @see io.jsondb.crypto.ICipher#decrypt(java.lang.String)
+         */
+        @Override
+        public String decrypt(String cipherText) {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
     }
-    
-  }
 }
