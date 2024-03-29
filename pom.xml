@@ -12,7 +12,7 @@
 		<repository>
 			<id>github</id>
 			<name>GitHub mwensveen-nl Apache Maven Packages</name>
-			<url>https://maven.pkg.github.com/mwensveen-nl/jsondb-core</url>
+			<url>https://maven.pkg.github.com/mwensveen-nl/releases</url>
 		</repository>
 	</distributionManagement>
 
