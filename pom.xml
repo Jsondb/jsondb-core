@@ -7,6 +7,15 @@
 	<artifactId>jsondb-core</artifactId>
 	<version>2.0.0</version>
 	<packaging>jar</packaging>
+
+	<distributionManagement>
+		<repository>
+			<id>github</id>
+			<name>GitHub mwensveen-nl Apache Maven Packages</name>
+			<url>https://maven.pkg.github.com/mwensveen-nl/jsondb-core</url>
+		</repository>
+	</distributionManagement>
+
 	<properties>
 		<compiler-plugin.version>3.13.0</compiler-plugin.version>
 		<hamcrest.version>2.2</hamcrest.version>
@@ -107,7 +116,6 @@
 			<version>6.1.5</version>
 			<scope>test</scope>
 		</dependency>
-
 	</dependencies>
 
 	<build>
