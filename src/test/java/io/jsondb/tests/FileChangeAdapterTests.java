@@ -53,7 +53,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class FileChangeAdapterTests {
 
     private static final long DB_RELOAD_TIMEOUT = 5 * 1000;
-    private String dbFilesLocation = "src/test/resources/dbfiles/eventsTests";
+    private String dbFilesLocation = "src/test/resources/dbfiles/changeAdapterTests";
     private File dbFilesFolder = new File(dbFilesLocation);
     private File instancesJson = new File(dbFilesFolder, "instances.json");
     private File pojoWithEnumFieldsJson = new File(dbFilesFolder, "pojowithenumfields.json");
