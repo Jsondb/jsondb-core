@@ -1247,24 +1247,31 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
 
       JsonWriter jw;
-      try {
-        jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
-      } catch (IOException ioe) {
-        logger.error("Failed to obtain writer for " + collectionName, ioe);
-        throw new JsonDBException("Failed to save " + collectionName, ioe);
-      }
-
       if (collectionToInsert.size() > 0) {
+        try {
+          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+        } catch (IOException ioe) {
+          logger.error("Failed to obtain writer for " + collectionName, ioe);
+          throw new JsonDBException("Failed to save " + collectionName, ioe);
+        }
+
         boolean insertResult = jw.appendToJsonFile(collection.values(), collectionToInsert.values());
-        if(insertResult) {
+        if (insertResult) {
           collection.putAll(collectionToInsert);
         }
       }
 
       if (collectionToUpdate.size() > 0) {
+        try {
+          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
+        } catch (IOException ioe) {
+          logger.error("Failed to obtain writer for " + collectionName, ioe);
+          throw new JsonDBException("Failed to save " + collectionName, ioe);
+        }
+
         boolean updateResult = jw.updateInJsonFile(collection, collectionToUpdate);
         if (updateResult) {
-         collection.putAll(collectionToUpdate);
+          collection.putAll(collectionToUpdate);
         }
       }
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
