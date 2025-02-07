@@ -8,7 +8,7 @@ Provides APIs that are very similar and inspired by MongoDB.
 
 Provides a Apache JxPath based query system.
 
-Visit http://jsondb.io for detailed information about Jsondb, Why Jsondb and Using Jsondb
+Visit https://jsondb.github.io  for detailed information about Jsondb, Why Jsondb and Using Jsondb
 
 
 
