@@ -10,7 +10,7 @@ org.eclipse.jdt.core.formatter.insert_space_before_comma_in_allocation_expressio
 org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_if=do not insert
 org.eclipse.jdt.core.formatter.insert_space_before_opening_brace_in_block=insert
 org.eclipse.jdt.core.formatter.insert_space_after_semicolon_in_try_resources=insert
-org.eclipse.jdt.core.compiler.codegen.targetPlatform=1.8
+org.eclipse.jdt.core.compiler.codegen.targetPlatform=17
 org.eclipse.jdt.core.formatter.insert_space_before_closing_angle_bracket_in_type_parameters=do not insert
 org.eclipse.jdt.core.formatter.comment.clear_blank_lines_in_javadoc_comment=false
 org.eclipse.jdt.core.formatter.never_indent_line_comments_on_first_column=false
@@ -260,7 +260,7 @@ org.eclipse.jdt.core.formatter.insert_space_before_opening_paren_in_constructor_
 org.eclipse.jdt.core.formatter.insert_space_before_closing_paren_in_try=do not insert
 org.eclipse.jdt.core.formatter.continuation_indentation_for_array_initializer=2
 org.eclipse.jdt.core.formatter.lineSplit=80
-org.eclipse.jdt.core.compiler.source=1.8
+org.eclipse.jdt.core.compiler.source=17
 org.eclipse.jdt.core.formatter.insert_new_line_in_empty_anonymous_type_declaration=insert
 org.eclipse.jdt.core.formatter.insert_new_line_in_empty_method_body=insert
 org.eclipse.jdt.core.formatter.tabulation.size=2
@@ -284,7 +284,7 @@ org.eclipse.jdt.core.formatter.insert_space_after_opening_paren_in_annotation=do
 eclipse.preferences.version=1
 org.eclipse.jdt.core.formatter.insert_space_before_closing_bracket_in_array_reference=do not insert
 org.eclipse.jdt.core.formatter.enabling_tag=@formatter\:on
-org.eclipse.jdt.core.compiler.compliance=1.8
+org.eclipse.jdt.core.compiler.compliance=17
 org.eclipse.jdt.core.formatter.blank_lines_after_package=1
 org.eclipse.jdt.core.formatter.alignment_for_superinterfaces_in_type_declaration=16
 org.eclipse.jdt.core.formatter.insert_new_line_at_end_of_file_if_missing=do not insert

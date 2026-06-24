@@ -19,57 +19,75 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 plugins {
-    //id 'net.saliman.cobertura' version '2.3.1'
+    id 'java'
     id 'jacoco'
-    id 'com.github.kt3k.coveralls' version '2.6.3'
+    id 'com.github.kt3k.coveralls' version '2.12.2'
+    id 'maven-publish'
+    id 'signing'
+    id 'eclipse'
     id 'idea'
 }
-
-apply plugin: "java"
-apply plugin: "jacoco"
-apply plugin: "eclipse"
-apply plugin: "signing"
-apply plugin: "maven"
 
 description = 'A pure java JSON based database.'
 group = 'io.jsondb'
 version = getVersionName()
 
 ext {
-  println "Build Version: $version"
+    println "Build Version: $version"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withJavadocJar()
+    withSourcesJar()
 }
 
 repositories {
-  mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
-  compile "org.slf4j:slf4j-api:1.7.21",
-          "com.fasterxml.jackson.core:jackson-annotations:2.9.9",
-          "com.fasterxml.jackson.core:jackson-core:2.9.9",
-          "com.fasterxml.jackson.core:jackson-databind:2.9.9",
-          "com.fasterxml.jackson.module:jackson-module-parameter-names:2.9.9",
-          "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.9",
-          "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.9",
-          "org.reflections:reflections:0.9.10",
-          "org.javassist:javassist:3.20.0-GA",
-          "commons-jxpath:commons-jxpath:1.3",
-          "com.google.guava:guava:19.0",
-          "commons-beanutils:commons-beanutils:1.9.3"
+    implementation 'org.slf4j:slf4j-api:1.7.21',
+            'com.fasterxml.jackson.core:jackson-annotations:2.9.9',
+            'com.fasterxml.jackson.core:jackson-core:2.9.9',
+            'com.fasterxml.jackson.core:jackson-databind:2.9.9',
+            'com.fasterxml.jackson.module:jackson-module-parameter-names:2.9.9',
+            'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.9',
+            'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.9',
+            'org.reflections:reflections:0.9.10',
+            'org.javassist:javassist:3.20.0-GA',
+            'commons-jxpath:commons-jxpath:1.3',
+            'com.google.guava:guava:19.0',
+            'commons-beanutils:commons-beanutils:1.9.3'
 
-  testCompile "junit:junit:4.12",
-          "org.hamcrest:hamcrest-library:1.3",
-          "org.springframework:spring-beans:4.3.3.RELEASE",
-          "org.springframework:spring-test:4.3.3.RELEASE"
+    testImplementation 'junit:junit:4.12',
+            'org.hamcrest:hamcrest-library:1.3',
+            'org.springframework:spring-beans:4.3.3.RELEASE',
+            'org.springframework:spring-test:4.3.3.RELEASE'
 }
 
-//cobertura.coverageFormats = ['html', 'xml'] // coveralls plugin depends on xml format report
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+tasks.test {
+    useJUnit()
+    jvmArgs(
+            '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
+            '--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED'
+    )
+}
 
 jacocoTestReport {
     dependsOn test
     reports {
-        xml.enabled = true // coveralls plugin depends on xml format report
-        html.enabled = true
+        xml.required = true
+        html.required = true
     }
 }
 
@@ -78,113 +96,93 @@ tasks.coveralls {
 }
 
 eclipse {
-  project {
-    name = "${project.name}"
-  }
+    project {
+        name = "${project.name}"
+    }
 }
 
 eclipseJdt {
-  inputFile = file("${rootDir}/buildsupport/eclipsesupport/settings/org.eclipse.jdt.core.prefs")
-  doLast {
-    copy {
-      from "${rootDir}/buildsupport/eclipsesupport/settings/org.eclipse.jdt.ui.prefs"
-      into "${projectDir}/.settings"
-      fileMode 0644
+    inputFile = file("${rootDir}/buildsupport/eclipsesupport/settings/org.eclipse.jdt.core.prefs")
+    doLast {
+        copy {
+            from "${rootDir}/buildsupport/eclipsesupport/settings/org.eclipse.jdt.ui.prefs"
+            into "${projectDir}/.settings"
+            fileMode 0644
+        }
     }
-  }
 }
 
 cleanEclipseJdt {
-  doFirst {
-    delete "${projectDir}/.settings"
-  }
+    doFirst {
+        delete "${projectDir}/.settings"
+    }
 }
 tasks.eclipse.dependsOn(cleanEclipse)
 
-task javadocJar(type: Jar) {
-  classifier = 'javadoc'
-  from javadoc
-}
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
 
-task sourcesJar(type: Jar) {
-  classifier = 'sources'
-  from sourceSets.main.allSource
-}
+            pom {
+                name = 'jsondb-core'
+                packaging = 'jar'
+                description = 'A pure java JSON based database.'
+                url = 'http://www.jsondb.io'
 
-artifacts {
-  archives javadocJar, sourcesJar
+                scm {
+                    connection = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+                    developerConnection = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+                    url = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+                }
+
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id = 'FarooqKhan'
+                        name = 'Farooq Khan'
+                        email = 'FarooqKhan@users.noreply.github.com'
+                    }
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = 'OSSRH'
+            def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username = OSSRH_USERNAME
+                password = OSSRH_PASSWORD
+            }
+        }
+    }
 }
 
 signing {
-  required { gradle.taskGraph.hasTask("uploadArchives") }
-  sign configurations.archives
-}
-
-uploadArchives {
-  //How to publish to MavenCentral: http://weibeld.net/java/publish-to-maven-central.html
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: OSSRH_USERNAME, password: OSSRH_PASSWORD)
-      }
-
-      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-        authentication(userName: OSSRH_USERNAME, password: OSSRH_PASSWORD)
-      }
-
-      pom.project {
-        name 'jsondb-core'
-        packaging 'jar'
-        // optionally artifactId can be defined here 
-        description 'A pure java JSON based database.'
-        url 'http://www.jsondb.io'
-
-        scm {
-          connection 'scm:git:https://github.com/Jsondb/jsondb-core.git'
-          developerConnection 'scm:git:https://github.com/Jsondb/jsondb-core.git'
-          url 'scm:git:https://github.com/Jsondb/jsondb-core.git'
-        }
-
-        licenses {
-          license {
-            name 'MIT License'
-            url 'https://opensource.org/licenses/MIT'
-          }
-        }
-
-        developers {
-          developer {
-            id 'FarooqKhan'
-            name 'Farooq Khan'
-            email 'FarooqKhan@users.noreply.github.com'
-          }
-        }
-      }
-    }
-  }
+    required { gradle.taskGraph.hasTask('publish') }
+    sign publishing.publications.mavenJava
 }
 
 /*
  * Gets the version name from the latest Git tag
  */
 def getVersionName() {
-  def stdout = new ByteArrayOutputStream()
-  exec {
-    commandLine 'git', 'describe', '--tags'
-    standardOutput = stdout
-  }
-  def versionString = stdout.toString().replaceFirst("-", ".");
-  versionString = versionString.substring(0, versionString.indexOf("-"));
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'describe', '--tags'
+        standardOutput = stdout
+    }
+    def versionString = stdout.toString().replaceFirst('-', '.')
+    versionString = versionString.substring(0, versionString.indexOf('-'))
 
-  if (JavaVersion.current().isJava8()) {
-    versionString = versionString + '-j8'
-  } else if (JavaVersion.current().isJava11()){
-    versionString = versionString + '-j11'
-  } else {
-    assert 'Only build with Java LTS version'
-  }
-
-  return versionString
+    return versionString + '-j17'
 }
