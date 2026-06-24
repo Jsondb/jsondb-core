@@ -75,6 +75,77 @@ public class DefaultAESCipherTests {
   }
   
   @Test
+  public void testDefault1DecryptWithWrongKey() throws UnsupportedEncodingException, GeneralSecurityException {
+    String keyA = CryptoUtil.generate128BitKey("password-a", "salt-a");
+    String keyB = CryptoUtil.generate128BitKey("password-b", "salt-b");
+    Default1Cipher encryptCipher = new Default1Cipher(keyA);
+    Default1Cipher decryptCipher = new Default1Cipher(keyB);
+
+    String ciphertext = encryptCipher.encrypt("secret-value");
+
+    expectedException.expect(JsonDBException.class);
+    expectedException.expectMessage("Incorrect key for this ciphertext");
+    decryptCipher.decrypt(ciphertext);
+  }
+
+  @Test
+  public void testDefault1ConstructorRejectsNullKey() throws GeneralSecurityException {
+    expectedException.expect(NullPointerException.class);
+    new Default1Cipher((byte[]) null);
+  }
+
+  @Test
+  public void testDefault1ConstructorRejectsNullCharset() throws GeneralSecurityException {
+    expectedException.expect(NullPointerException.class);
+    new Default1Cipher(new byte[16], null);
+  }
+
+  @Test
+  public void testDefaultAESCBCDecryptWithWrongKey() throws UnsupportedEncodingException, GeneralSecurityException {
+    String keyA = CryptoUtil.generate128BitKey("password-a", "salt-a");
+    String keyB = CryptoUtil.generate128BitKey("password-b", "salt-b");
+    DefaultAESCBCCipher encryptCipher = new DefaultAESCBCCipher(keyA);
+    DefaultAESCBCCipher decryptCipher = new DefaultAESCBCCipher(keyB);
+
+    String ciphertext = encryptCipher.encrypt("secret-value");
+
+    expectedException.expect(JsonDBException.class);
+    expectedException.expectMessage("DefaultAESCBCCipher failed to decrypt text");
+    decryptCipher.decrypt(ciphertext);
+  }
+
+  @Test
+  public void testDefaultAESCBCCipherByteArrayConstructor() throws GeneralSecurityException {
+    byte[] keyBytes = java.util.Base64.getDecoder().decode("1r8+24pibarAWgS85/Heeg==");
+    DefaultAESCBCCipher cipher = new DefaultAESCBCCipher(keyBytes, "UTF-8");
+
+    String encrypted = cipher.encrypt("byte-key-constructor");
+    assertEquals("byte-key-constructor", cipher.decrypt(encrypted));
+  }
+
+  @Test
+  public void testDefault1DecryptCorruptedCiphertext() throws Exception {
+    String key = CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf");
+    Default1Cipher cipher = new Default1Cipher(key);
+    String ciphertext = cipher.encrypt("payload");
+    String corrupted = ciphertext.substring(0, ciphertext.length() - 4) + "XXXX";
+
+    expectedException.expect(JsonDBException.class);
+    expectedException.expectMessage("Incorrect key for this ciphertext");
+    cipher.decrypt(corrupted);
+  }
+
+  @Test
+  public void testDefault1ByteArrayConstructor() throws Exception {
+    byte[] keyBytes = java.util.Base64.getDecoder().decode(
+        CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf"));
+    Default1Cipher cipher = new Default1Cipher(keyBytes);
+
+    String encrypted = cipher.encrypt("byte-array-key");
+    assertEquals("byte-array-key", cipher.decrypt(encrypted));
+  }
+
+  @Test
   public void testKeyDefault1() throws UnsupportedEncodingException, GeneralSecurityException {
     String base64EncodedKey = CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf");
     ICipher cipher = new Default1Cipher(base64EncodedKey);

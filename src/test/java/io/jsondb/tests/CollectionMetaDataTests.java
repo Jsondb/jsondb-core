@@ -41,6 +41,7 @@ import io.jsondb.JsonDBConfig;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
+import io.jsondb.tests.model.ExtendedSecureVolume;
 import io.jsondb.tests.model.SecureVolume;
 import io.jsondb.tests.model.Volume;
 
@@ -107,6 +108,17 @@ public class CollectionMetaDataTests {
     assertEquals(true, cmd.isSecretField("encryptionKey"));
 
     assertTrue(cmd.hasSecret());
+  }
+
+  @Test
+  public void test_MetadataLoad_InheritedSecretField() {
+    ExtendedSecureVolume volume = new ExtendedSecureVolume();
+    CollectionMetaData cmd = new CollectionMetaData("extendedsecurevolumes", volume.getClass(), "1.0", null);
+
+    assertEquals("encryptionKey", cmd.getSecretAnnotatedFieldNames().get(0));
+    assertTrue(cmd.isSecretField("encryptionKey"));
+    assertEquals("getEncryptionKey", cmd.getGetterMethodForFieldName("encryptionKey").getName());
+    assertEquals("setEncryptionKey", cmd.getSetterMethodForFieldName("encryptionKey").getName());
   }
 
   @Test

@@ -21,6 +21,7 @@
 package io.jsondb.tests;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import org.junit.After;
@@ -32,8 +33,13 @@ import org.junit.rules.ExpectedException;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
+import io.jsondb.tests.model.Instance;
 import io.jsondb.tests.model.PojoForPrivateGetIdTest;
 import io.jsondb.tests.model.PojoForPrivateSetIdTest;
+import io.jsondb.tests.model.PojoForThrowingGetIdTest;
+import io.jsondb.tests.util.TestUtils;
+
+import io.jsondb.JsonDBConfig;
 
 import static org.junit.Assert.*;
 
@@ -259,5 +265,100 @@ public class UtilTests {
     assertNotNull(indexes);
     assertEquals(4, indexes.size());
     assertArrayEquals(new Integer[]{7,6,5,4}, indexes.toArray());
+  }
+
+  @Test
+  public void test_getIdForEntity_throwsFromGetter() throws Exception {
+    PojoForThrowingGetIdTest pojo = new PojoForThrowingGetIdTest("001");
+    Method getter = PojoForThrowingGetIdTest.class.getMethod("getId");
+    Method getIdForEntity = Util.class.getDeclaredMethod("getIdForEntity", Object.class, Method.class);
+    getIdForEntity.setAccessible(true);
+
+    try {
+      getIdForEntity.invoke(null, pojo, getter);
+      fail("Expected InvalidJsonDbApiUsageException");
+    } catch (java.lang.reflect.InvocationTargetException e) {
+      assertTrue(e.getCause() instanceof InvalidJsonDbApiUsageException);
+      assertEquals(
+          "Failed to invoke getter method for a idAnnotated field, the method threw a exception",
+          e.getCause().getMessage());
+    }
+  }
+
+  @Test
+  public void test_getSliceIndexes_nonNumericPart() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("expected a integer representing i");
+
+    Util.getSliceIndexes("foo:5", 10);
+  }
+
+  @Test
+  public void test_stampVersion_success() {
+    File target = new File(dbFilesFolder, "newcollection.json");
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false, null);
+
+    assertTrue(Util.stampVersion(dbConfig, target, "1.0"));
+    TestUtils.checkLastLines(target, new String[] {"{\"schemaVersion\":\"1.0\"}"});
+  }
+
+  @Test
+  public void test_stampVersion_failureWhenTargetIsDirectory() {
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false, null);
+    assertFalse(Util.stampVersion(dbConfig, dbFilesFolder, "1.0"));
+  }
+
+  @Test
+  public void test_deepCopy_clonesInstance() throws Exception {
+    Instance original = new Instance();
+    original.setId("42");
+    original.setHostname("host-42");
+    original.setPublicKey("pub");
+
+    Method deepCopy = Util.class.getDeclaredMethod("deepCopy", Object.class);
+    deepCopy.setAccessible(true);
+    Instance copy = (Instance) deepCopy.invoke(null, original);
+
+    assertNotSame(original, copy);
+    assertEquals("42", copy.getId());
+    assertEquals("host-42", copy.getHostname());
+    assertEquals("pub", copy.getPublicKey());
+  }
+
+  @Test
+  public void test_deepCopy_nullReturnsNull() throws Exception {
+    Method deepCopy = Util.class.getDeclaredMethod("deepCopy", Object.class);
+    deepCopy.setAccessible(true);
+    assertNull(deepCopy.invoke(null, new Object[] { null }));
+  }
+
+  @Test
+  public void test_getIdForEntity_nullGetterReturnsNull() throws Exception {
+    Instance instance = new Instance();
+    instance.setId("99");
+
+    Method getIdForEntity = Util.class.getDeclaredMethod("getIdForEntity", Object.class, Method.class);
+    getIdForEntity.setAccessible(true);
+    assertNull(getIdForEntity.invoke(null, instance, null));
+  }
+
+  @Test
+  public void test_setFieldValueForEntity_invokesSetter() throws Exception {
+    Instance instance = new Instance();
+    Method setter = Instance.class.getMethod("setHostname", String.class);
+    Method setFieldValue = Util.class.getDeclaredMethod("setFieldValueForEntity", Object.class, Object.class, Method.class);
+    setFieldValue.setAccessible(true);
+
+    setFieldValue.invoke(null, instance, "new-host", setter);
+    assertEquals("new-host", instance.getHostname());
+  }
+
+  @Test
+  public void test_isSliceable() {
+    assertFalse(Util.isSliceable(null));
+    assertFalse(Util.isSliceable(""));
+    assertFalse(Util.isSliceable(":"));
+    assertFalse(Util.isSliceable("::"));
+    assertTrue(Util.isSliceable("1:2"));
   }
 }

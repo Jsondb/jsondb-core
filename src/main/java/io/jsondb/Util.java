@@ -218,20 +218,26 @@ public class Util {
       logger.error("Failed to write SchemaVersion to the new .json file {}", f, e);
       return false;
     } finally {
-      try {
-        writer.close();
-      } catch (IOException e) {
-        logger.error("Failed to close BufferedWriter for new collection file {}", f, e);
+      if (writer != null) {
+        try {
+          writer.close();
+        } catch (IOException e) {
+          logger.error("Failed to close BufferedWriter for new collection file {}", f, e);
+        }
       }
-      try {
-        osr.close();
-      } catch (IOException e) {
-        logger.error("Failed to close OutputStreamWriter for new collection file {}", f, e);
+      if (osr != null) {
+        try {
+          osr.close();
+        } catch (IOException e) {
+          logger.error("Failed to close OutputStreamWriter for new collection file {}", f, e);
+        }
       }
-      try {
-        fos.close();
-      } catch (IOException e) {
-        logger.error("Failed to close FileOutputStream for new collection file {}", f, e);
+      if (fos != null) {
+        try {
+          fos.close();
+        } catch (IOException e) {
+          logger.error("Failed to close FileOutputStream for new collection file {}", f, e);
+        }
       }
     }
     return true;

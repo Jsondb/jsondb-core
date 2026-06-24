@@ -70,6 +70,22 @@ public class JsonReaderTests {
   }
 
   @Test
+  public void testReadAllLines() throws IOException {
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
+        new DefaultSchemaVersionComparator());
+
+    JsonReader jr = new JsonReader(dbConfig, instancesJson);
+    int lineCount = 0;
+    String line;
+    while ((line = jr.readLine()) != null) {
+      assertNotNull(line);
+      lineCount++;
+    }
+    jr.close();
+    assertEquals(7, lineCount);
+  }
+
+  @Test
   public void testReadLine() throws IOException {
     JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
         new DefaultSchemaVersionComparator());
@@ -80,6 +96,17 @@ public class JsonReaderTests {
     assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
   }
   
+  @Test
+  public void testReadLineAndClose() throws IOException {
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
+        new DefaultSchemaVersionComparator());
+
+    JsonReader jr = new JsonReader(dbConfig, instancesJson);
+    assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
+    assertNotNull(jr.readLine());
+    jr.close();
+  }
+
   @Test
   public void testLockException() throws IOException {
     File lockFolder = new File(dbFilesLocation, "lock");

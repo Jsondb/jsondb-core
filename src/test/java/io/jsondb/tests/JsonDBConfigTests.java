@@ -45,6 +45,14 @@ public class JsonDBConfigTests {
   private String dbFilesLocation = "src/test/resources/dbfiles/dbConfigTests";
 
   @Test
+  public void testDbConfigDefaultsWhenComparatorNull() {
+    JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false, null);
+
+    assertTrue(dbConfig.getSchemaComparator() instanceof DefaultSchemaVersionComparator);
+    assertTrue(dbConfig.getObjectMapper().isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES));
+  }
+
+  @Test
   public void testDbConfig() {
     JsonDBConfig dbConfig = new JsonDBConfig(dbFilesLocation, "io.jsondb.tests.model", null, false,
         new DefaultSchemaVersionComparator());
