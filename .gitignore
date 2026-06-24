@@ -24,3 +24,6 @@
 *.ipr
 *.iws
 /out/
+
+# CircleCI deploy keys (private keys must never be committed)
+.circleci/deploy-keys/

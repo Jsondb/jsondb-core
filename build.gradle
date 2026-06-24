@@ -66,10 +66,15 @@ dependencies {
 //cobertura.coverageFormats = ['html', 'xml'] // coveralls plugin depends on xml format report
 
 jacocoTestReport {
+    dependsOn test
     reports {
         xml.enabled = true // coveralls plugin depends on xml format report
         html.enabled = true
     }
+}
+
+tasks.coveralls {
+    dependsOn jacocoTestReport
 }
 
 eclipse {

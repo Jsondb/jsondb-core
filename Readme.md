@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/Jsondb/jsondb-core.svg?style=shield)](https://circleci.com/gh/Jsondb/jsondb-core)   [![Travis branch](https://img.shields.io/travis/Jsondb/jsondb-core/master.svg?maxAge=2592000?style=plastic&label=travisci)](https://travis-ci.org/Jsondb/jsondb-core)  [![Coveralls branch](https://img.shields.io/coveralls/Jsondb/jsondb-core/master.svg?maxAge=2592000?style=plastic)](https://coveralls.io/github/Jsondb/jsondb-core?branch=master)
+[![CircleCI](https://circleci.com/gh/Jsondb/jsondb-core.svg?style=shield)](https://circleci.com/gh/Jsondb/jsondb-core) [![Coveralls](https://img.shields.io/coveralls/Jsondb/jsondb-core/master.svg)](https://coveralls.io/github/Jsondb/jsondb-core?branch=master)
 
 JsonDB is a pure java database that stores its data as Json Files.
 
