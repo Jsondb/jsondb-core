@@ -34,6 +34,15 @@ version = getVersionName()
 
 ext {
     println "Build Version: $version"
+
+    slf4jVersion = '1.7.36'
+    jacksonVersion = '2.18.8'
+    guavaVersion = '33.6.0-jre'
+    beanutilsVersion = '1.11.0'
+    jxpathVersion = '1.4.0'
+    reflectionsVersion = '0.10.2'
+    junitVersion = '4.13.2'
+    hamcrestVersion = '2.2'
 }
 
 java {
@@ -47,24 +56,33 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    implementation 'org.slf4j:slf4j-api:1.7.21',
-            'com.fasterxml.jackson.core:jackson-annotations:2.9.9',
-            'com.fasterxml.jackson.core:jackson-core:2.9.9',
-            'com.fasterxml.jackson.core:jackson-databind:2.9.9',
-            'com.fasterxml.jackson.module:jackson-module-parameter-names:2.9.9',
-            'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.9.9',
-            'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.9.9',
-            'org.reflections:reflections:0.9.10',
-            'org.javassist:javassist:3.20.0-GA',
-            'commons-jxpath:commons-jxpath:1.3',
-            'com.google.guava:guava:19.0',
-            'commons-beanutils:commons-beanutils:1.9.3'
+configurations.configureEach {
+    resolutionStrategy {
+        eachDependency { details ->
+            if (details.requested.group == 'commons-collections' && details.requested.name == 'commons-collections') {
+                details.useVersion '3.2.2'
+                details.because 'Pin commons-collections to latest 3.x with security fixes'
+            }
+        }
+    }
+}
 
-    testImplementation 'junit:junit:4.12',
-            'org.hamcrest:hamcrest-library:1.3',
-            'org.springframework:spring-beans:4.3.3.RELEASE',
-            'org.springframework:spring-test:4.3.3.RELEASE'
+dependencies {
+    implementation "org.slf4j:slf4j-api:${slf4jVersion}"
+
+    implementation platform("com.fasterxml.jackson:jackson-bom:${jacksonVersion}")
+    implementation 'com.fasterxml.jackson.core:jackson-databind',
+            'com.fasterxml.jackson.module:jackson-module-parameter-names',
+            'com.fasterxml.jackson.datatype:jackson-datatype-jdk8',
+            'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    implementation "org.reflections:reflections:${reflectionsVersion}",
+            "commons-jxpath:commons-jxpath:${jxpathVersion}",
+            "com.google.guava:guava:${guavaVersion}",
+            "commons-beanutils:commons-beanutils:${beanutilsVersion}"
+
+    testImplementation "junit:junit:${junitVersion}",
+            "org.hamcrest:hamcrest-library:${hamcrestVersion}"
 }
 
 tasks.withType(JavaCompile).configureEach {
