@@ -71,26 +71,14 @@ public class CollectionMetaData {
     this.collectionLock = new ReentrantReadWriteLock();
 
     //Populate the class metadata
-    List<Field[]> fields = new ArrayList<>();
-    Field[] startFields = clazz.getDeclaredFields();
-    int totalFields = startFields.length;
-    fields.add(startFields);
-    while (clazz.getSuperclass() != Object.class) {
-      clazz = clazz.getSuperclass();
-      Field[] toAdd = clazz.getDeclaredFields();
-      totalFields += toAdd.length;
-      fields.add(toAdd);
-    }
+    setupClassMetadata(clazz);
 
-    int x = 0;
-    Field[] fs = new Field[totalFields];
-    for (Field[] field : fields) {
-      for (Field value : field) {
-        fs[x] = value;
-        x++;
-      }
-    }
+    this.idAnnotatedFieldGetterMethod = getterMethodMap.get(idAnnotatedFieldName);
+    this.idAnnotatedFieldSetterMethod = setterMethodMap.get(idAnnotatedFieldName);
+  }
 
+  private void setupClassMetadata(final Class<?> clazz) {
+    Field[] fs = clazz.getDeclaredFields();
     Method[] ms = clazz.getDeclaredMethods();
     for (Field f : fs) {
       String fieldName = f.getName();
@@ -119,8 +107,7 @@ public class CollectionMetaData {
         }
       }
     }
-    this.idAnnotatedFieldGetterMethod = getterMethodMap.get(idAnnotatedFieldName);
-    this.idAnnotatedFieldSetterMethod = setterMethodMap.get(idAnnotatedFieldName);
+    if (clazz.getSuperclass() != Object.class) setupClassMetadata(clazz.getSuperclass());
   }
 
   protected ReentrantReadWriteLock getCollectionLock() {
