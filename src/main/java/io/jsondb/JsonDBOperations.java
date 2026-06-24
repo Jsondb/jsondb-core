@@ -755,19 +755,22 @@ public interface JsonDBOperations {
   <T> void changeEncryption(ICipher newCipher);
 
   /**
-   * This method backs up JSONDB collections to specified backup path
+   * This method backs up JSONDB collections to specified backup path as a zip archive.
+   * The backup contains all {@code *.json} collection files from the database directory.
+   * If {@code backupPath} is a directory, {@code jsondb-backup.zip} is created inside it.
+   * If the path has no {@code .zip} extension, {@code .zip} is appended automatically.
    *
    * @param backupPath location at which to backup the database contents
    */
   void backup(String backupPath);
 
   /**
-   * This method restores JSONDB collections from specified restore path.
+   * This method restores JSONDB collections from a zip backup created by {@link #backup(String)}.
    * if merge flag is set to true restore operation will merge collections from restore location
    * and if it is set to false it will replace existing collections with collections being
    * restored
    *
-   * @param restorePath path were backup jsondb files are present
+   * @param restorePath path to the backup zip file, or a directory containing {@code jsondb-backup.zip}
    * @param merge whether to merge data from restore location
    */
   void restore(String restorePath, boolean merge);

@@ -29,6 +29,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -53,6 +54,7 @@ import io.jsondb.crypto.CryptoUtil;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.events.CollectionFileChangeListener;
 import io.jsondb.events.EventListenerList;
+import io.jsondb.io.JsonDbArchive;
 import io.jsondb.io.JsonFileLockException;
 import io.jsondb.io.JsonReader;
 import io.jsondb.io.JsonWriter;
@@ -1612,8 +1614,23 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public void backup(String backupPath) {
-    // TODO Auto-generated method stub
-
+    File zipFile;
+    try {
+      zipFile = JsonDbArchive.resolveBackupZipFile(backupPath);
+    } catch (IllegalArgumentException e) {
+      throw new InvalidJsonDbApiUsageException(e.getMessage());
+    }
+    File dbDirectory = dbConfig.getDbFilesLocation();
+    lockAllCollectionsWrite();
+    try {
+      JsonDbArchive.createBackupZip(dbDirectory, zipFile);
+      logger.info("Created JsonDB backup at {}", zipFile.getAbsolutePath());
+    } catch (IOException e) {
+      logger.error("Failed to create JsonDB backup at {}", zipFile.getAbsolutePath(), e);
+      throw new JsonDBException("Failed to create JsonDB backup at " + zipFile.getAbsolutePath(), e);
+    } finally {
+      unlockAllCollectionsWrite();
+    }
   }
 
   /* (non-Javadoc)
@@ -1621,7 +1638,120 @@ public class JsonDBTemplate implements JsonDBOperations {
    */
   @Override
   public void restore(String restorePath, boolean merge) {
-    // TODO Auto-generated method stub
+    File zipFile;
+    try {
+      zipFile = JsonDbArchive.resolveRestoreZipFile(restorePath);
+    } catch (IllegalArgumentException e) {
+      throw new InvalidJsonDbApiUsageException(e.getMessage());
+    }
+    if (!zipFile.isFile()) {
+      throw new InvalidJsonDbApiUsageException("Restore backup file not found: " + zipFile.getAbsolutePath());
+    }
+    if (merge) {
+      restoreMerge(zipFile);
+    } else {
+      restoreReplace(zipFile);
+    }
+  }
 
+  private void restoreReplace(File zipFile) {
+    File dbDirectory = dbConfig.getDbFilesLocation();
+    lockAllCollectionsWrite();
+    try {
+      JsonDbArchive.extractReplaceCollectionFiles(dbDirectory, zipFile);
+      reLoadDB();
+      logger.info("Restored JsonDB from backup {} (replace mode)", zipFile.getAbsolutePath());
+    } catch (IOException e) {
+      logger.error("Failed to restore JsonDB from backup {}", zipFile.getAbsolutePath(), e);
+      throw new JsonDBException("Failed to restore JsonDB from backup " + zipFile.getAbsolutePath(), e);
+    } finally {
+      unlockAllCollectionsWrite();
+    }
+  }
+
+  private void restoreMerge(File zipFile) {
+    File tempDirectory = null;
+    try {
+      tempDirectory = Files.createTempDirectory("jsondb-restore-").toFile();
+      Map<String, File> extractedCollections = JsonDbArchive.extractToDirectory(tempDirectory, zipFile);
+      File dbDirectory = dbConfig.getDbFilesLocation();
+
+      for (Entry<String, File> entry : extractedCollections.entrySet()) {
+        String collectionName = entry.getKey();
+        File backupCollectionFile = entry.getValue();
+        CollectionMetaData cmd = cmdMap.get(collectionName);
+
+        if (null == cmd) {
+          File targetFile = new File(dbDirectory, backupCollectionFile.getName());
+          JsonDbArchive.copyCollectionFile(backupCollectionFile, targetFile);
+          continue;
+        }
+
+        if (collectionExists(collectionName)) {
+          mergeCollectionFromBackup(collectionName, cmd, backupCollectionFile);
+        } else {
+          File targetFile = new File(dbDirectory, backupCollectionFile.getName());
+          JsonDbArchive.copyCollectionFile(backupCollectionFile, targetFile);
+          reloadCollection(collectionName);
+        }
+      }
+      logger.info("Restored JsonDB from backup {} (merge mode)", zipFile.getAbsolutePath());
+    } catch (IOException e) {
+      logger.error("Failed to merge JsonDB from backup {}", zipFile.getAbsolutePath(), e);
+      throw new JsonDBException("Failed to merge JsonDB from backup " + zipFile.getAbsolutePath(), e);
+    } finally {
+      if (null != tempDirectory) {
+        Util.delete(tempDirectory);
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void mergeCollectionFromBackup(String collectionName, CollectionMetaData cmd, File backupCollectionFile) {
+    List<Object> documents = readEntityDocumentsFromFile(backupCollectionFile, cmd);
+    for (Object document : documents) {
+      upsert(document, collectionName);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> List<T> readEntityDocumentsFromFile(File collectionFile, CollectionMetaData cmd) {
+    Class<T> entity = cmd.getClazz();
+    List<T> documents = new ArrayList<T>();
+    JsonReader jr = null;
+    try {
+      jr = new JsonReader(dbConfig, collectionFile);
+      String line = null;
+      int lineNo = 1;
+      while ((line = jr.readLine()) != null) {
+        if (lineNo++ > 1) {
+          documents.add(dbConfig.getObjectMapper().readValue(line, entity));
+        }
+      }
+    } catch (IOException e) {
+      logger.error("Failed to read documents from backup file {}", collectionFile.getName(), e);
+      throw new JsonDBException("Failed to read documents from backup file " + collectionFile.getName(), e);
+    } finally {
+      if (null != jr) {
+        jr.close();
+      }
+    }
+    return documents;
+  }
+
+  private void lockAllCollectionsWrite() {
+    List<String> collectionNames = new ArrayList<String>(cmdMap.keySet());
+    Collections.sort(collectionNames);
+    for (String collectionName : collectionNames) {
+      cmdMap.get(collectionName).getCollectionLock().writeLock().lock();
+    }
+  }
+
+  private void unlockAllCollectionsWrite() {
+    List<String> collectionNames = new ArrayList<String>(cmdMap.keySet());
+    Collections.sort(collectionNames);
+    for (int i = collectionNames.size() - 1; i >= 0; i--) {
+      cmdMap.get(collectionNames.get(i)).getCollectionLock().writeLock().unlock();
+    }
   }
 }
