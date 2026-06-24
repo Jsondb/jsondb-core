@@ -146,6 +146,19 @@ public class DefaultAESCipherTests {
   }
 
   @Test
+  public void testDefault1CipherWithExplicitCharset() throws Exception {
+    byte[] keyBytes = java.util.Base64.getDecoder().decode(
+        CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf"));
+    Default1Cipher cipher = new Default1Cipher(
+        java.util.Base64.getEncoder().encodeToString(keyBytes),
+        java.nio.charset.StandardCharsets.ISO_8859_1);
+
+    String message = "Hallo, gru\u00DF";
+    String encrypted = cipher.encrypt(message);
+    assertEquals(message, cipher.decrypt(encrypted));
+  }
+
+  @Test
   public void testKeyDefault1() throws UnsupportedEncodingException, GeneralSecurityException {
     String base64EncodedKey = CryptoUtil.generate128BitKey("MyPassword", "ksdfkja923u4anf");
     ICipher cipher = new Default1Cipher(base64EncodedKey);

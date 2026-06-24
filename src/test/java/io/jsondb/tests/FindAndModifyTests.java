@@ -21,6 +21,7 @@
 package io.jsondb.tests;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.util.List;
@@ -67,6 +68,45 @@ public class FindAndModifyTests {
   @After
   public void tearDown() throws Exception {
     Util.delete(dbFilesFolder);
+  }
+
+  @Test
+  public void testFindAndModify_WithClassOverload() {
+    Update update = Update.update("publicKey", "UpdatedViaClassOverload");
+    String jxQuery = String.format("/.[id='%s']", "04");
+
+    Instance result = jsonDBTemplate.findAndModify(jxQuery, update, Instance.class);
+    assertEquals("UpdatedViaClassOverload", result.getPublicKey());
+  }
+
+  @Test
+  public void testFindAllAndModify_WithClassOverload() {
+    Update update = Update.update("hostname", "class-batch-host");
+    String jxQuery = String.format("/.[id>'%s']", "04");
+
+    List<Instance> results = jsonDBTemplate.findAllAndModify(jxQuery, update, Instance.class);
+    assertEquals(2, results.size());
+    assertEquals("class-batch-host", results.get(0).getHostname());
+    assertEquals("class-batch-host", results.get(1).getHostname());
+  }
+
+  @Test
+  public void testFindAndModify_ReturnsNullWhenNoMatch() {
+    Update update = Update.update("publicKey", "unused");
+    String jxQuery = String.format("/.[id='%s']", "missing-id");
+
+    Instance result = jsonDBTemplate.findAndModify(jxQuery, update, "instances");
+    assertEquals(null, result);
+  }
+
+  @Test
+  public void testFindAllAndModify_ReturnsEmptyListWhenNoMatch() {
+    Update update = Update.update("hostname", "unused");
+    String jxQuery = String.format("/.[id='%s']", "missing-id");
+
+    List<Instance> results = jsonDBTemplate.findAllAndModify(jxQuery, update, Instance.class);
+    assertNotNull(results);
+    assertEquals(0, results.size());
   }
 
   @Test

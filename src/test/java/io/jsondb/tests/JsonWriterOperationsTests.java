@@ -241,6 +241,30 @@ public class JsonWriterOperationsTests {
   }
 
   @Test
+  public void testReadonlyCollectionRejectsBatchUpdate() throws Exception {
+    CollectionMetaData readonlyCmd = cmd();
+    readonlyCmd.setActualSchemaVersion("0.9");
+
+    JsonWriter writer = new JsonWriter(dbConfig(), readonlyCmd, "instances", instancesJson);
+
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection is loaded as readonly");
+    writer.updateInJsonFile(new HashMap<Object, Instance>(), new HashMap<Object, Instance>());
+  }
+
+  @Test
+  public void testReadonlyCollectionRejectsRenameKey() throws Exception {
+    CollectionMetaData readonlyCmd = cmd();
+    readonlyCmd.setActualSchemaVersion("0.9");
+
+    JsonWriter writer = new JsonWriter(dbConfig(), readonlyCmd, "instances", instancesJson);
+
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("Collection is loaded as readonly");
+    writer.renameKeyInJsonFile(new ArrayList<Instance>(), false, "hostname", "hostName");
+  }
+
+  @Test
   public void testReWriteReadonlyCollectionWhenIgnoreReadonly() throws Exception {
     CollectionMetaData readonlyCmd = cmd();
     readonlyCmd.setActualSchemaVersion("0.9");

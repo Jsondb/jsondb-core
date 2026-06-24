@@ -75,6 +75,20 @@ public class InsertTests {
     Util.delete(dbFilesFolder);
   }
 
+  @Test
+  public void testInsertGeneratesIdWhenMissing() {
+    jsonDBTemplate.createCollection(Site.class);
+    Site site = new Site();
+    site.setLocation("us-west-2");
+
+    jsonDBTemplate.insert(site, "sites");
+
+    List<Site> sites = jsonDBTemplate.findAll(Site.class);
+    assertEquals(1, sites.size());
+    assertNotNull(sites.get(0).getId());
+    assertEquals("us-west-2", sites.get(0).getLocation());
+  }
+
   /**
    * Test to insert a new object into a non-existing collection.
    */

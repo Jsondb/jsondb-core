@@ -11,6 +11,7 @@ import io.jsondb.crypto.CryptoUtil;
 import io.jsondb.crypto.Default1Cipher;
 import io.jsondb.tests.model.ExtendedSecureVolume;
 import io.jsondb.tests.model.Instance;
+import io.jsondb.tests.model.PojoWithThrowingSecretGetter;
 
 public class CryptoUtilTests {
 
@@ -48,6 +49,24 @@ public class CryptoUtilTests {
     CryptoUtil.encryptFields(instance, cmd, cipher);
 
     assertNull(instance.getPrivateKey());
+  }
+
+  @Test
+  public void testEncryptFieldsPropagatesGetterFailure() throws Exception {
+    String key = CryptoUtil.generate128BitKey("test-password", "test-salt");
+    Default1Cipher cipher = new Default1Cipher(key);
+
+    PojoWithThrowingSecretGetter pojo = new PojoWithThrowingSecretGetter();
+    pojo.setId("1");
+    CollectionMetaData cmd = new CollectionMetaData("throwingsecretgetter", PojoWithThrowingSecretGetter.class, "1.0", null);
+
+    try {
+      CryptoUtil.encryptFields(pojo, cmd, cipher);
+      org.junit.Assert.fail("Expected InvocationTargetException");
+    } catch (java.lang.reflect.InvocationTargetException e) {
+      org.junit.Assert.assertTrue(e.getCause() instanceof RuntimeException);
+      org.junit.Assert.assertEquals("secret getter failed", e.getCause().getMessage());
+    }
   }
 
   @Test

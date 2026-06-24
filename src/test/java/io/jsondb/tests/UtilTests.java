@@ -37,6 +37,7 @@ import io.jsondb.tests.model.Instance;
 import io.jsondb.tests.model.PojoForPrivateGetIdTest;
 import io.jsondb.tests.model.PojoForPrivateSetIdTest;
 import io.jsondb.tests.model.PojoForThrowingGetIdTest;
+import io.jsondb.tests.model.PojoForThrowingSetIdTest;
 import io.jsondb.tests.util.TestUtils;
 
 import io.jsondb.JsonDBConfig;
@@ -351,6 +352,55 @@ public class UtilTests {
 
     setFieldValue.invoke(null, instance, "new-host", setter);
     assertEquals("new-host", instance.getHostname());
+  }
+
+  @Test
+  public void test_setIdForEntity_nullSetterReturnsGeneratedId() throws Exception {
+    Instance instance = new Instance();
+    Method setIdForEntity = Util.class.getDeclaredMethod("setIdForEntity", Object.class, Method.class);
+    setIdForEntity.setAccessible(true);
+
+    Object id = setIdForEntity.invoke(null, instance, null);
+    assertNotNull(id);
+    assertTrue(id.toString().length() > 0);
+  }
+
+  @Test
+  public void test_setIdForEntity_throwsFromSetter() throws Exception {
+    PojoForThrowingSetIdTest pojo = new PojoForThrowingSetIdTest();
+    Method setter = PojoForThrowingSetIdTest.class.getMethod("setId", String.class);
+    Method setIdForEntity = Util.class.getDeclaredMethod("setIdForEntity", Object.class, Method.class);
+    setIdForEntity.setAccessible(true);
+
+    try {
+      setIdForEntity.invoke(null, pojo, setter);
+      fail("Expected InvalidJsonDbApiUsageException");
+    } catch (java.lang.reflect.InvocationTargetException e) {
+      assertTrue(e.getCause() instanceof InvalidJsonDbApiUsageException);
+      assertEquals(
+          "Failed to invoke setter method for a idAnnotated field, the method threw a exception",
+          e.getCause().getMessage());
+    }
+  }
+
+  @Test
+  public void test_setFieldValueForEntity_inaccessibleSetterReturnsNull() throws Exception {
+    PojoForPrivateSetIdTest pojo = new PojoForPrivateSetIdTest();
+    Method privateSetter = PojoForPrivateSetIdTest.class.getDeclaredMethod("setId", String.class);
+    Method setFieldValue = Util.class.getDeclaredMethod("setFieldValueForEntity", Object.class, Object.class, Method.class);
+    setFieldValue.setAccessible(true);
+
+    Object result = setFieldValue.invoke(null, pojo, "new-id", privateSetter);
+    assertNull(result);
+    assertNull(pojo.getId());
+  }
+
+  @Test
+  public void test_getSliceIndexes_invalidStepPart() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("expected format is i:j:k");
+
+    Util.getSliceIndexes("1:2:abc", 10);
   }
 
   @Test
