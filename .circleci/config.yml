@@ -11,9 +11,24 @@ jobs:
 
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - gradle-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "build.gradle" }}-{{ checksum "settings.gradle" }}
+            - gradle-
       - run:
           name: Test and publish coverage
-          command: ./gradlew test jacocoTestReport coveralls
+          command: |
+            for attempt in 1 2 3; do
+              ./gradlew test jacocoTestReport coverallsJacoco && exit 0
+              echo "Gradle failed on attempt ${attempt}, retrying in 30s..."
+              sleep 30
+            done
+            exit 1
+      - save_cache:
+          key: gradle-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "build.gradle" }}-{{ checksum "settings.gradle" }}
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
 
 workflows:
   version: 2

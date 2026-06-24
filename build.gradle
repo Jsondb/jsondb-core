@@ -21,7 +21,7 @@
 plugins {
     id 'java'
     id 'jacoco'
-    id 'com.github.kt3k.coveralls' version '2.12.2'
+    id 'com.github.nbaztec.coveralls-jacoco' version '1.2.20'
     id 'maven-publish'
     id 'signing'
     id 'eclipse'
@@ -89,10 +89,6 @@ jacocoTestReport {
         xml.required = true
         html.required = true
     }
-}
-
-tasks.coveralls {
-    dependsOn jacocoTestReport
 }
 
 eclipse {
