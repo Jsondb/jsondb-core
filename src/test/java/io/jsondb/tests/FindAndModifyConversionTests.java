@@ -225,4 +225,41 @@ public class FindAndModifyConversionTests {
       assertUnchanged(d);
     }
   }
+
+  // Changing the @Id used to leave the original document and add a copy under the new id (issue #78)
+
+  private void assertNoDocumentWithId(String id) {
+    assertNull(jsonDBTemplate.findById(id, UpdateDoc.class));
+    jsonDBTemplate.reLoadDB();
+    assertNull(jsonDBTemplate.findById(id, UpdateDoc.class));
+    assertEquals(2, jsonDBTemplate.count(UpdateDoc.class));
+  }
+
+  @Test
+  public void testFindAndModifyRejectsChangingTheId() {
+    assertRejected("id", "changed", "@Id");
+    assertNoDocumentWithId("changed");
+  }
+
+  @Test
+  public void testFindAllAndModifyRejectsChangingTheId() {
+    try {
+      jsonDBTemplate.findAllAndModify("/.", Update.update("id", "changed"), UpdateDoc.class);
+      fail("Expected findAllAndModify to reject changing the @Id");
+    } catch (InvalidJsonDbApiUsageException expected) {
+      assertTrue("message was: " + expected.getMessage(), expected.getMessage().contains("@Id"));
+    }
+    for (UpdateDoc d : jsonDBTemplate.findAll(UpdateDoc.class)) {
+      assertUnchanged(d);
+    }
+    assertNoDocumentWithId("changed");
+  }
+
+  @Test
+  public void testSettingTheIdToItsCurrentValueIsAllowed() {
+    UpdateDoc modified = jsonDBTemplate.findAndModify("/.[id='1']", Update.update("id", "1").set("name", "renamed"),
+        UpdateDoc.class);
+    assertEquals("renamed", modified.getName());
+    assertEquals(2, jsonDBTemplate.count(UpdateDoc.class));
+  }
 }
