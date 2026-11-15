@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2020 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -270,6 +270,30 @@ public class UpsertTests {
     instances = jsonDBTemplate.getCollection(Instance.class);
     assertNotNull(instances);
     assertEquals(size+5, instances.size());
+  }
+
+  /**
+   * Test that a batch upsert mixing new and existing objects writes both the inserts and
+   * the updates to disk (issue #62: the update half used to fail with ClosedChannelException).
+   */
+  @Test
+  public void testUpsert_CollectionWithNewAndExistingObjectsPersistsBoth() {
+    Instance newInstance = new Instance();
+    newInstance.setId("21");
+    newInstance.setHostname("ec2-54-191-21");
+
+    Instance existingInstance = jsonDBTemplate.findById("03", Instance.class);
+    existingInstance.setHostname("ec2-54-191-04_Updated");
+
+    jsonDBTemplate.upsert(Arrays.asList(newInstance, existingInstance), Instance.class);
+
+    assertEquals("ec2-54-191-04_Updated", jsonDBTemplate.findById("03", Instance.class).getHostname());
+    assertEquals("ec2-54-191-21", jsonDBTemplate.findById("21", Instance.class).getHostname());
+
+    jsonDBTemplate.reLoadDB();
+    assertEquals("ec2-54-191-04_Updated", jsonDBTemplate.findById("03", Instance.class).getHostname());
+    assertEquals("ec2-54-191-21", jsonDBTemplate.findById("21", Instance.class).getHostname());
+    assertEquals(7, jsonDBTemplate.findAll(Instance.class).size());
   }
 
   /**

@@ -1269,6 +1269,10 @@ public class JsonDBTemplate implements JsonDBOperations {
         }
       }
 
+      if (collectionToInsert.isEmpty() && collectionToUpdate.isEmpty()) {
+        return;
+      }
+
       JsonWriter jw;
       try {
         jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
@@ -1277,18 +1281,16 @@ public class JsonDBTemplate implements JsonDBOperations {
         throw new JsonDBException("Failed to save " + collectionName, ioe);
       }
 
-      if (collectionToInsert.size() > 0) {
-        boolean insertResult = jw.appendToJsonFile(collection.values(), collectionToInsert.values());
-        if(insertResult) {
-          collection.putAll(collectionToInsert);
-        }
-      }
-
-      if (collectionToUpdate.size() > 0) {
-        boolean updateResult = jw.updateInJsonFile(collection, collectionToUpdate);
-        if (updateResult) {
-         collection.putAll(collectionToUpdate);
-        }
+      // Write inserts and updates in a single rewrite: a JsonWriter closes its channel after one
+      // operation, so a second write through it fails (issue #62), and two writes are not atomic.
+      // Updated documents keep their position and new documents are appended, as before.
+      Map<Object, T> upsertedCollection = new LinkedHashMap<Object, T>(collection);
+      upsertedCollection.putAll(collectionToUpdate);
+      upsertedCollection.putAll(collectionToInsert);
+      boolean writeResult = jw.reWriteJsonFile(upsertedCollection.values(), false);
+      if (writeResult) {
+        collection.putAll(collectionToUpdate);
+        collection.putAll(collectionToInsert);
       }
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
       logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
