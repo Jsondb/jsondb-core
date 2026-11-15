@@ -51,6 +51,7 @@ public class JsonDBConfig {
   private Collection<Class<?>> entityClasses;
   private ICipher cipher;
   private boolean compatibilityMode;
+  private volatile boolean syncFolderOnWrite;
 
   //References
   private ObjectMapper objectMapper;
@@ -153,6 +154,12 @@ public class JsonDBConfig {
     } else {
       objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
     }
+  }
+  public boolean isSyncFolderOnWrite() {
+    return syncFolderOnWrite;
+  }
+  public void setSyncFolderOnWrite(boolean syncFolderOnWrite) {
+    this.syncFolderOnWrite = syncFolderOnWrite;
   }
   public ObjectMapper getObjectMapper() {
     return objectMapper;
