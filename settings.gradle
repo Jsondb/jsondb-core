@@ -25,4 +25,9 @@ pluginManagement {
     }
 }
 
+plugins {
+    // Downloads the Java 8 runtime that testOnJava8 needs when this machine does not have one
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
 rootProject.name = 'jsondb-core'

@@ -10,6 +10,30 @@ Provides a Apache JxPath based query system.
 
 Visit https://jsondb.github.io  for detailed information about Jsondb, Why Jsondb and Using Jsondb
 
+## Installation
+
+JsonDB runs on Java 8 or later. It is published to Maven Central:
+
+```xml
+<dependency>
+  <groupId>io.jsondb</groupId>
+  <artifactId>jsondb-core</artifactId>
+  <version>1.1.0</version>
+</dependency>
+```
+
+```groovy
+implementation 'io.jsondb:jsondb-core:1.1.0'
+```
+
+On Android (API 26+) or under OSGi, where package scanning cannot find your classes, pass the entity classes directly:
+
+```java
+JsonDBTemplate db = new JsonDBTemplate(dbFilesLocation, List.of(User.class, Site.class));
+```
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed, including behaviour changes to check when upgrading from 1.0.x.
+
 
 
 
