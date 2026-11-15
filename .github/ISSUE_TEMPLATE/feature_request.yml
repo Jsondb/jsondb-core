@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a new feature or an improvement to JsonDB.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe what you're trying to do and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like JsonDB to do?
+      description: An example of the API you have in mind helps.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+  - type: input
+    id: jsondb-version
+    attributes:
+      label: JsonDB version you're using
+      placeholder: "1.1.16"
