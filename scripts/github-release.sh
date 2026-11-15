@@ -21,7 +21,7 @@
 #
 # Creates the GitHub release for a version that has been published to Maven Central: tags the
 # current commit "v<version>", pushes the tag, and creates the release from that version's section
-# of CHANGELOG.md, marked as the latest release. See RELEASING.md.
+# of CHANGELOG.md (or the "Unreleased" section), marked as the latest release. See RELEASING.md.
 #
 # Usage: scripts/github-release.sh 1.1.0
 
@@ -45,9 +45,17 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-notes=$(awk -v heading="## $version" '$0 == heading {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md)
+section() {
+  awk -v heading="## $1" '$0 == heading {found=1; next} found && /^## / {exit} found {print}' CHANGELOG.md
+}
+# Releases normally come from the "Unreleased" section, which is renamed to the version afterwards,
+# because the version (the commit count) changes with every commit, including the one that renames it
+notes=$(section "$version")
 if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
-  echo "CHANGELOG.md has no '## $version' section." >&2
+  notes=$(section "Unreleased")
+fi
+if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+  echo "CHANGELOG.md has no '## $version' or '## Unreleased' section with content." >&2
   exit 1
 fi
 

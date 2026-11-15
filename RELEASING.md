@@ -34,7 +34,7 @@ The code is compiled for Java 8 and must keep working there. `./gradlew testOnJa
 
 ## Each release
 
-1. Make sure `master` has everything for the release, CI is green, and `CHANGELOG.md` has a section for the version.
+1. Make sure `master` has everything for the release, CI is green, and the `## Unreleased` section of `CHANGELOG.md` describes the changes. The section is renamed only after the release (step 8), because every commit changes the version number.
 2. Check out the exact commit to release and confirm the tree is clean:
 
    ```sh
@@ -65,5 +65,6 @@ The code is compiled for Java 8 and must keep working there. `./gradlew testOnJa
    scripts/github-release.sh 1.1.0
    ```
 
-   The script checks that the current commit builds that version, tags it `v1.1.0`, pushes the tag, and creates the release from the `## 1.1.0` section of `CHANGELOG.md`, marked **Latest**. It needs `gh` signed in with write access to the repository.
-8. Update the version on the website's download page.
+   The script checks that the current commit builds that version, tags it `v1.1.0`, pushes the tag, and creates the release from the `## 1.1.0` section of `CHANGELOG.md` if there is one, otherwise from `## Unreleased`, marked **Latest**. It needs `gh` signed in with write access to the repository.
+8. In a follow-up PR, rename `## Unreleased` in `CHANGELOG.md` to the version that was published, e.g. `## 1.1.4`, and add a new empty `## Unreleased` section above it.
+9. Update the version on the website's download page.

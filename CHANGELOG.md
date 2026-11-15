@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- A `@Document` class without JsonDB's `@Id` annotation, for example one using `javax.persistence.Id`, failed with a bare `NullPointerException`. It now fails with an `InvalidJsonDbApiUsageException` naming the class and the annotation it needs. (#23)
+
 ## 1.1.0
 
 The first release since 1.0.115 (March 2020). **It runs on Java 8 and later:** one artifact replaces the separate `-j8` and `-j11` builds.
