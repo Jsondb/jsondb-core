@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,7 +25,6 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.Base64;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -136,12 +135,12 @@ public class DefaultAESCBCCipher implements ICipher {
     encryptionLock = new ReentrantLock();
     decryptionLock = new ReentrantLock();
     try {
-      this.encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "SunJCE");
-      this.decryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding", "SunJCE");
+      this.encryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+      this.decryptCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
       SecretKeySpec key = new SecretKeySpec(encryptionKey, AES_ENCRYPTION_ALGORITHM);
       encryptCipher.init(Cipher.ENCRYPT_MODE, key,new IvParameterSpec(encryptionKey));
       decryptCipher.init(Cipher.DECRYPT_MODE, key,new IvParameterSpec(encryptionKey));
-    } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException e) {
+    } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
       logger.error("Failed to create DefaultAESCBCCipher", e);
       throw e;
     } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
