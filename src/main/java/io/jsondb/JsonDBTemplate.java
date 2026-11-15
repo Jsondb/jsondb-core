@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.jxpath.FunctionLibrary;
@@ -74,8 +75,16 @@ import io.jsondb.query.ddl.RenameOperation;
 /**
  * @version 1.0 25-Sep-2016
  */
-public class JsonDBTemplate implements JsonDBOperations {
+public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   private Logger logger = LoggerFactory.getLogger(JsonDBTemplate.class);
+
+  // How many JsonDBTemplate instances in this JVM have each folder open, by canonical path. Two
+  // instances on one folder each rewrite the files from their own in-memory copy and lose each
+  // other's writes (issue #51). Only counts are kept, so abandoned instances can still be collected.
+  private static final ConcurrentHashMap<String, Integer> OPEN_FOLDERS = new ConcurrentHashMap<String, Integer>();
+  private String openFolderKey;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
+  private Thread shutdownHook;
 
   private JsonDBConfig dbConfig = null;
   private final boolean encrypted;
@@ -148,8 +157,63 @@ public class JsonDBTemplate implements JsonDBOperations {
       logger.debug("Encryption is enabled for JSON DB");
       this.encrypted = true;
     }
-    initialize();
-    eventListenerList = new EventListenerList(dbConfig, cmdMap);
+    registerOpenFolder();
+    try {
+      initialize();
+      eventListenerList = new EventListenerList(dbConfig, cmdMap);
+    } catch (RuntimeException e) {
+      releaseOpenFolder();
+      throw e;
+    }
+
+    // Auto-cleanup at shutdown
+    shutdownHook = new Thread() {
+      @Override
+      public void run() {
+        eventListenerList.shutdown();
+      }
+    };
+    Runtime.getRuntime().addShutdownHook(shutdownHook);
+  }
+
+  private void registerOpenFolder() {
+    File folder = dbConfig.getDbFilesLocation();
+    try {
+      openFolderKey = folder.getCanonicalPath();
+    } catch (IOException e) {
+      openFolderKey = folder.getAbsolutePath();
+    }
+    int open = OPEN_FOLDERS.merge(openFolderKey, 1, Integer::sum);
+    if (open > 1) {
+      logger.warn("JsonDB folder {} is already open by another JsonDBTemplate in this JVM ({} instances now)."
+          + " Instances on the same folder lose each other's writes: share one JsonDBTemplate between threads,"
+          + " or close() the other instance first. A future release will refuse to open a folder twice (issue #51).",
+          openFolderKey, open);
+    }
+  }
+
+  private void releaseOpenFolder() {
+    OPEN_FOLDERS.computeIfPresent(openFolderKey, (key, open) -> open > 1 ? open - 1 : null);
+  }
+
+  /**
+   * Releases this instance's hold on its folder and stops its file-change watcher. Another
+   * JsonDBTemplate can then open the folder without the "already open" warning. Call it when the
+   * instance is no longer needed, for example with try-with-resources. Closing twice is harmless; do
+   * not use the instance after closing it.
+   */
+  @Override
+  public void close() {
+    if (!closed.compareAndSet(false, true)) {
+      return;
+    }
+    releaseOpenFolder();
+    eventListenerList.shutdown();
+    try {
+      Runtime.getRuntime().removeShutdownHook(shutdownHook);
+    } catch (IllegalStateException e) {
+      // The JVM is already shutting down and runs the hook itself
+    }
   }
 
   private void initialize(){
@@ -172,13 +236,6 @@ public class JsonDBTemplate implements JsonDBOperations {
 
     loadDB();
 
-    // Auto-cleanup at shutdown
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      @Override
-      public void run() {
-        eventListenerList.shutdown();
-      }
-    });
   }
 
   /* (non-Javadoc)
