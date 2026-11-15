@@ -170,4 +170,15 @@ public class DefaultAESCipherTests {
     assertEquals(msg, decryptedText);
     assertTrue("ciphertext too short", encryptedText.length() > 40);
   }
+
+  /**
+   * Ciphertext produced by Default1Cipher when it was pinned to the SunJCE provider. Whichever
+   * provider supplies AES/GCM now (SunJCE on the JVM, Conscrypt on Android) must still decrypt it,
+   * otherwise existing encrypted databases would become unreadable.
+   */
+  @Test
+  public void testDefault1DecryptsCiphertextWrittenBySunJce() throws GeneralSecurityException {
+    ICipher cipher = new Default1Cipher("1r8+24pibarAWgS85/Heeg==");
+    assertEquals("Hallo, Wie gehts", cipher.decrypt("5o8UGmP/pQEpcmJ7qYPue9/2Oo5bQD7e0dgtudMG1Isj0dbOtRZFGKLDkFEE6mtr"));
+  }
 }

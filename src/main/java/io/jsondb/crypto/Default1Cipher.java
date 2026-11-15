@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019 Reinier Zwitserloot
+ * Copyright (c) 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to 
@@ -27,7 +28,6 @@ import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.Base64;
 
@@ -58,7 +58,6 @@ public class Default1Cipher implements ICipher {
   private static final String ENCRYPTION_ALGORITHM = "AES";
   private static final String MODE_ALGORITHM = "GCM";
   private static final String PADDING_ALGORITHM = "NoPadding";
-  private static final String PROVIDER = "SunJCE";
   private static final String CIPHER_ALGORITHM = ENCRYPTION_ALGORITHM + "/" + MODE_ALGORITHM + "/" + PADDING_ALGORITHM;
   private static final int IV_SIZE = 16;
   private static final int TAG_SIZE = 128;
@@ -136,7 +135,7 @@ public class Default1Cipher implements ICipher {
     try {
       byte[] iv = new byte[IV_SIZE];
       rnd.nextBytes(iv);
-      Cipher enc = Cipher.getInstance(CIPHER_ALGORITHM, PROVIDER);
+      Cipher enc = Cipher.getInstance(CIPHER_ALGORITHM);
       enc.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(TAG_SIZE, iv));
       byte[] input = plainText.getBytes(charset);
       int sizeReq = IV_SIZE + enc.getOutputSize(input.length);
@@ -148,7 +147,7 @@ public class Default1Cipher implements ICipher {
       store.flip();
       ByteBuffer bb = Base64.getEncoder().encode(store);
       return new String(bb.array(), 0, bb.limit(), StandardCharsets.US_ASCII);
-    } catch (NoSuchPaddingException | NoSuchProviderException | NoSuchAlgorithmException | IllegalBlockSizeException |InvalidAlgorithmParameterException e) {
+    } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException |InvalidAlgorithmParameterException e) {
       throw new JsonDBException("Default cipher cannot be used on this VM installation", e);
     } catch (InvalidKeyException e) {
       throw new JsonDBException("Invalid key", e);
@@ -167,10 +166,10 @@ public class Default1Cipher implements ICipher {
   public String decrypt(String cipherText) {
     byte[] in = Base64.getDecoder().decode(cipherText);
     try {
-      Cipher dec = Cipher.getInstance(CIPHER_ALGORITHM, PROVIDER);
+      Cipher dec = Cipher.getInstance(CIPHER_ALGORITHM);
       dec.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_SIZE, in, 0, IV_SIZE));
       return new String(dec.doFinal(in, IV_SIZE, in.length - IV_SIZE), charset);
-    } catch (NoSuchPaddingException | NoSuchProviderException | NoSuchAlgorithmException | IllegalBlockSizeException e) {
+    } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException e) {
       throw new JsonDBException("Default cipher cannot be used on this VM installation", e);
     } catch (InvalidKeyException e) {
       throw new JsonDBException("Invalid key", e);
