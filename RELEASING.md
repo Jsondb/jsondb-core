@@ -53,10 +53,10 @@ The code is compiled for Java 8 and must keep working there. `./gradlew testOnJa
 
    ```sh
    ./gradlew help -q          # prints "Build Version: ..."
-   ./gradlew clean test publishToMavenCentral
+   ./gradlew clean test testOnJava8 publishToMavenCentral
    ```
 
-   GnuPG asks for the key's passphrase. The task prints the deployment id.
+   `testOnJava8` runs the tests on a Java 8 runtime; `test` alone only uses the JDK running Gradle. GnuPG asks for the key's passphrase. The task prints the deployment id.
 5. On central.sonatype.com, open *Deployments*. Wait for the deployment to be **Validated**, check the files (jar, sources, javadoc, pom and a `.asc` signature for each), then click **Publish**. To abandon a bad upload, click **Drop** instead.
 6. After 10–30 minutes, confirm it is available at `https://repo1.maven.org/maven2/io/jsondb/jsondb-core/`.
 7. Still on the published commit, create the GitHub release:
