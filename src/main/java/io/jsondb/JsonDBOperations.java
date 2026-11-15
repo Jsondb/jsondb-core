@@ -465,6 +465,25 @@ public interface JsonDBOperations {
   <T> List<T> findAll(String collectionName, Comparator<? super T> comparator, String slice);
 
   /**
+   * Returns the number of documents in the collection for the specified type, without copying them
+   * as findAll() does.
+   *
+   * @param entityClass the type whose collection is counted
+   * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
+   *            and member of the baseScanPackage
+   * @return the number of documents in the collection
+   */
+  <T> int count(Class<T> entityClass);
+
+  /**
+   * Returns the number of documents in the specified collection, without copying them as findAll() does.
+   *
+   * @param collectionName name of the collection to count
+   * @return the number of documents in the collection
+   */
+  int count(String collectionName);
+
+  /**
    * Returns a document with the given id mapped onto the given class. The collection the query is ran against will be
    * derived from the given target class as well.
    *

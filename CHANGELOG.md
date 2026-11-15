@@ -8,6 +8,7 @@
 
 ### New
 
+- `count(Class)` and `count(String collectionName)` return the number of documents in a collection without copying them, as `findAll()` does. (#54)
 - `JsonDBTemplate` is now `AutoCloseable`. `close()` stops its file-change watcher and removes its JVM shutdown hook, which every instance used to leak, and releases its folder (see below). (#51)
 
 ### Changes

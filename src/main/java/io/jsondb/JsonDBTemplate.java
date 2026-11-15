@@ -911,6 +911,32 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   }
 
   /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#count(java.lang.Class)
+   */
+  @Override
+  public <T> int count(Class<T> entityClass) {
+    return count(Util.determineCollectionName(entityClass));
+  }
+
+  /* (non-Javadoc)
+   * @see io.jsondb.JsonDBOperations#count(java.lang.String)
+   */
+  @Override
+  public int count(String collectionName) {
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    Map<Object, ?> collection = collectionsRef.get().get(collectionName);
+    if((null == cmd) || (null == collection)) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
+    }
+    cmd.getCollectionLock().readLock().lock();
+    try {
+      return collection.size();
+    } finally {
+      cmd.getCollectionLock().readLock().unlock();
+    }
+  }
+
+  /* (non-Javadoc)
    * @see io.jsondb.JsonDBOperations#findById(java.lang.Object, java.lang.Class)
    */
   @Override
