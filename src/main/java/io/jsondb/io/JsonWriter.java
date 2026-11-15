@@ -31,10 +31,13 @@ import java.nio.channels.FileLock;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -155,6 +158,72 @@ public class JsonWriter {
   }
 
   /**
+   * The one write path behind every public method: writes the schema version line and then the
+   * documents, one per line, to a temporary file in the database folder, and atomically moves it over
+   * the collection file, all while holding the collection's file lock.
+   *
+   * @param documents the documents the collection file must contain, in order
+   * @param ignoreReadonly write even if the collection is loaded readonly; schema updates need this
+   * @param lineTransform applied to each serialized document before it is written, or null
+   * @return true if the file was replaced, false if the lock or the temporary file could not be had or
+   *         the temporary file could not be written; the collection file is unchanged then
+   */
+  private boolean writeCollectionFile(Collection<?> documents, boolean ignoreReadonly, UnaryOperator<String> lineTransform) {
+    if (!ignoreReadonly && cmd.isReadOnly()) {
+      releaseLock(null);
+      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
+    }
+    FileLock lock = null;
+    try {
+      try {
+        lock = acquireLock();
+      } catch (IOException e) {
+        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
+        return false;
+      }
+
+      File tFile;
+      try {
+        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
+      } catch (IOException e) {
+        logger.error("Failed to create temporary file for collection {}", collectionName, e);
+        return false;
+      }
+
+      try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tFile), charset))) {
+        writer.write(objectMapper.writeValueAsString(schemaVersion));
+        writer.newLine();
+        for (Object document : documents) {
+          String documentData = objectMapper.writeValueAsString(document);
+          writer.write(null == lineTransform ? documentData : lineTransform.apply(documentData));
+          writer.newLine();
+        }
+      } catch (JsonProcessingException e) {
+        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
+        deleteQuietly(tFile);
+        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
+      } catch (IOException e) {
+        logger.error("Failed to write temporary collection file {}", tFile.getName(), e);
+        deleteQuietly(tFile);
+        return false;
+      }
+
+      moveIntoPlace(tFile);
+      return true;
+    } finally {
+      releaseLock(lock);
+    }
+  }
+
+  private void deleteQuietly(File file) {
+    try {
+      Files.deleteIfExists(file.toPath());
+    } catch (IOException e) {
+      logger.error("Failed to delete temporary collection file {}", file.getName(), e);
+    }
+  }
+
+  /**
    * A utility method that appends the provided object to the end of collection
    * file in a atomic way
    *
@@ -165,78 +234,9 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean appendToJsonFile(Collection<T> collection, Object objectToSave) {
-    if (cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
-    }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-        
-        for (T o : collection) {
-          String documentData = objectMapper.writeValueAsString(o);
-          writer.write(documentData);
-          writer.newLine();
-        }
-        String newDocument = objectMapper.writeValueAsString(objectToSave);
-        writer.write(newDocument);
-        writer.newLine();
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    List<Object> documents = new ArrayList<Object>(collection);
+    documents.add(objectToSave);
+    return writeCollectionFile(documents, false, null);
   }
 
   /**
@@ -250,80 +250,9 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean appendToJsonFile(Collection<T> collection, Collection<? extends T> batchToSave) {
-    if (cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
-    }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-        
-        for (T o : collection) {
-          String documentData = objectMapper.writeValueAsString(o);
-          writer.write(documentData);
-          writer.newLine();
-        }
-        for (T o : batchToSave) {
-          String documentData = objectMapper.writeValueAsString(o);
-          writer.write(documentData);
-          writer.newLine();
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    List<Object> documents = new ArrayList<Object>(collection);
+    documents.addAll(batchToSave);
+    return writeCollectionFile(documents, false, null);
   }
 
   /**
@@ -337,77 +266,13 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean removeFromJsonFile(Map<Object, T> collection, Object id) {
-    if (cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
+    List<Object> documents = new ArrayList<Object>(collection.size());
+    for (Entry<Object, T> entry : collection.entrySet()) {
+      if (!entry.getKey().equals(id)) {
+        documents.add(entry.getValue());
+      }
     }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-        
-        for (Entry<Object, T> entry : collection.entrySet()) {
-          if (!entry.getKey().equals(id)) {
-          String documentData = objectMapper.writeValueAsString(entry.getValue());
-          writer.write(documentData);
-          writer.newLine();
-          }
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    return writeCollectionFile(documents, false, null);
   }
 
   /**
@@ -421,77 +286,13 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean removeFromJsonFile(Map<Object, T> collection, Set<Object> removeIds) {
-    if (cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
+    List<Object> documents = new ArrayList<Object>(collection.size());
+    for (Entry<Object, T> entry : collection.entrySet()) {
+      if (!removeIds.contains(entry.getKey())) {
+        documents.add(entry.getValue());
+      }
     }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-        
-        for (Entry<Object, T> entry : collection.entrySet()) {
-          if (!removeIds.contains(entry.getKey())) {
-          String documentData = objectMapper.writeValueAsString(entry.getValue());
-          writer.write(documentData);
-          writer.newLine();
-          }
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    return writeCollectionFile(documents, false, null);
   }
 
   /**
@@ -506,82 +307,11 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean updateInJsonFile(Map<Object, T> collection, Object id, T objectToSave) {
-    if (cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
+    List<Object> documents = new ArrayList<Object>(collection.size());
+    for (Entry<Object, T> entry : collection.entrySet()) {
+      documents.add(entry.getKey().equals(id) ? objectToSave : entry.getValue());
     }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-        
-        for (Entry<Object, T> entry : collection.entrySet()) {
-          T o = null;
-          if (entry.getKey().equals(id)) {
-            o = objectToSave;
-          } else {
-            o = entry.getValue();
-          }
-
-          String documentData = objectMapper.writeValueAsString(o);
-          writer.write(documentData);
-          writer.newLine();
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    return writeCollectionFile(documents, false, null);
   }
 
   /**
@@ -595,84 +325,13 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean updateInJsonFile(Map<Object, T> collection, Map<Object, T> modifiedObjects) {
-    if (cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
+    List<Object> documents = new ArrayList<Object>(collection.size());
+    for (Entry<Object, T> entry : collection.entrySet()) {
+      documents.add(modifiedObjects.containsKey(entry.getKey()) ? modifiedObjects.get(entry.getKey()) : entry.getValue());
     }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-
-        for (Entry<Object, T> entry : collection.entrySet()) {
-          T o = null;
-          if (modifiedObjects.containsKey(entry.getKey())) {
-            o = modifiedObjects.get(entry.getKey());
-          } else {
-            o = entry.getValue();
-          }
-
-          String documentData = objectMapper.writeValueAsString(o);
-          writer.write(documentData);
-          writer.newLine();
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    return writeCollectionFile(documents, false, null);
   }
-  
+
   /**
    * A utility method that completely replaces the contents of .json with the provided collection
    * in a atomic way
@@ -684,77 +343,9 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean reWriteJsonFile(Collection<T> collection, boolean ignoreReadonly) {
-    if (!ignoreReadonly && cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
-    }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-
-        for (T o : collection) {
-          String documentData = objectMapper.writeValueAsString(o);
-          writer.write(documentData);
-          writer.newLine();
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    return writeCollectionFile(collection, ignoreReadonly, null);
   }
-  
+
   /**
    * A utility method renames a particular key for the entire contents of .json in a atomic way
    *
@@ -767,81 +358,10 @@ public class JsonWriter {
    * @return true if success
    */
   public <T> boolean renameKeyInJsonFile(Collection<T> collection, boolean ignoreReadonly, String oldKey, String newKey) {
-    if (!ignoreReadonly && cmd.isReadOnly()) {
-      throw new InvalidJsonDbApiUsageException("Failed to modify collection, Collection is loaded as readonly");
-    }
-    FileLock lock = null;
-    try {
-      try {
-        lock = acquireLock();
-      } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
-        return false; 
-      }
-      
-      File tFile;
-      try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
-      } catch (IOException e) {
-        logger.error("Failed to create temporary file for append", e);
-        return false;
-      }
-      String tFileName = tFile.getName();
-
-      FileOutputStream fos = null;
-      OutputStreamWriter osr = null;
-      BufferedWriter writer = null;
-      try {
-        fos = new FileOutputStream(tFile);
-        osr = new OutputStreamWriter(fos, charset);
-        writer = new BufferedWriter(osr);
-
-        //Stamp version first
-        String version = objectMapper.writeValueAsString(schemaVersion);
-        writer.write(version);
-        writer.newLine();
-
-        //We do the below so that we do not coincidentally replace contents of some value
-        //This does cause a problem it will break if single quotes(invalid) is used along with the
-        //JsonParser.Feature.ALLOW_SINGLE_QUOTES
-        String oldKeyWithQuotes = "\"" + oldKey + "\":";
-        String newKeyWithQuotes = "\"" + newKey + "\":";
-        
-        for (T o : collection) {
-          String documentData = objectMapper.writeValueAsString(o);
-          documentData = documentData.replace(oldKeyWithQuotes, newKeyWithQuotes);
-          writer.write(documentData);
-          writer.newLine();
-        }
-      } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
-        throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
-      } catch (IOException e) {
-        logger.error("Failed to append object to temporary collection file {}", tFileName, e);
-        return false;
-      } finally {
-        try {
-          writer.close();
-        } catch (IOException e) {
-          logger.error("Failed to close BufferedWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          osr.close();
-        } catch (IOException e) {
-          logger.error("Failed to close OutputStreamWriter for temporary collection file {}", tFileName, e);
-        }
-        try {
-          fos.close();
-        } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for temporary collection file {}", tFileName, e);
-        }
-      }
-
-      moveIntoPlace(tFile);
-      return true;
-      
-    } finally {
-      releaseLock(lock);
-    }
+    // Matching the quotes and colon keeps a value that happens to contain the key name intact. It does
+    // break if single quotes (invalid JSON) are used together with JsonParser.Feature.ALLOW_SINGLE_QUOTES
+    final String oldKeyWithQuotes = "\"" + oldKey + "\":";
+    final String newKeyWithQuotes = "\"" + newKey + "\":";
+    return writeCollectionFile(collection, ignoreReadonly, line -> line.replace(oldKeyWithQuotes, newKeyWithQuotes));
   }
 }
