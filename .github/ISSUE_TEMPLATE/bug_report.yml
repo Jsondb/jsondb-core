@@ -1,0 +1,65 @@
+name: Bug report
+description: Something in JsonDB doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please check the [documentation](https://jsondb.github.io) and [existing issues](https://github.com/Jsondb/jsondb-core/issues) first.
+  - type: input
+    id: jsondb-version
+    attributes:
+      label: JsonDB version
+      placeholder: "1.1.16"
+    validations:
+      required: true
+  - type: input
+    id: java-version
+    attributes:
+      label: Java version
+      description: Output of `java -version`, or the JDK vendor and version.
+      placeholder: "17 (Temurin)"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - JVM (desktop or server)
+        - Android
+        - OSGi
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: android-api
+    attributes:
+      label: Android API level
+      description: Only if you're on Android.
+      placeholder: "34"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal code or steps. A failing JUnit test is ideal.
+      render: java
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or stack trace
+      render: text
