@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to 
@@ -89,7 +89,19 @@ public class JsonReader {
       throw new JsonFileLockException("JsonReader failed to obtain a file lock for file " + fileLockLocation, e);
     }
 
-    fis = new FileInputStream(collectionFile);
+    try {
+      fis = new FileInputStream(collectionFile);
+    } catch (IOException e) {
+      // Release the file lock, otherwise every later reader and writer of this collection in the JVM fails
+      try {
+        lock.release();
+        channel.close();
+        raf.close();
+      } catch (IOException e1) {
+        logger.error("Failed to release lock for collection file {}", collectionFile.getName(), e1);
+      }
+      throw e;
+    }
     isr = new InputStreamReader(fis, decoder);
     reader = new BufferedReader(isr);
   }

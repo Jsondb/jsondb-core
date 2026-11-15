@@ -20,6 +20,7 @@
  */
 package io.jsondb.tests;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -179,16 +180,113 @@ public class CollectionSchemaUpdateTests {
   }
 
   /**
-   * A schema update that fails part way must still release the collection's write lock,
-   * otherwise every later operation on the collection blocks forever
+   * Writes loadbalancer.json at schema 0.5 with the given documents
+   */
+  private void writeOldSchemaDocs(String... docs) throws Exception {
+    List<String> lines = new ArrayList<String>();
+    lines.add("{\"schemaVersion\":\"0.5\"}");
+    for (String doc : docs) {
+      lines.add(doc);
+    }
+    java.nio.file.Files.write(loadbalancerJson.toPath(), lines, StandardCharsets.UTF_8);
+    jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model", null, true, null);
+  }
+
+  /**
+   * Asserts the update is rejected before anything is written
+   */
+  private void assertRejectedUnchanged(CollectionSchemaUpdate cu, String expectedMessagePart) throws Exception {
+    byte[] before = java.nio.file.Files.readAllBytes(loadbalancerJson.toPath());
+    try {
+      jsonDBTemplate.updateCollectionSchema(cu, LoadBalancer.class);
+      fail("Expected the schema update to be rejected");
+    } catch (InvalidJsonDbApiUsageException expected) {
+      assertTrue("message was: " + expected.getMessage(), expected.getMessage().contains(expectedMessagePart));
+    }
+    assertArrayEquals(before, java.nio.file.Files.readAllBytes(loadbalancerJson.toPath()));
+    assertFalse("collection write lock is still held", collectionLock("loadbalancer").isWriteLocked());
+  }
+
+  @Test
+  public void test_SwappedRenames() throws Exception {
+    writeOldSchemaDocs("{\"id\":\"001\",\"hostname\":\"u1\",\"username\":\"h1\"}");
+    jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("hostname", new RenameOperation("username"))
+        .set("username", new RenameOperation("hostname")), LoadBalancer.class);
+    LoadBalancer lb = jsonDBTemplate.findById("001", LoadBalancer.class);
+    assertEquals("h1", lb.getHostname());
+    assertEquals("u1", lb.getUsername());
+  }
+
+  @Test
+  public void test_ChainedRenames() throws Exception {
+    writeOldSchemaDocs("{\"id\":\"001\",\"user\":\"u1\",\"username\":\"h1\"}");
+    jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("user", new RenameOperation("username"))
+        .set("username", new RenameOperation("hostname")), LoadBalancer.class);
+    LoadBalancer lb = jsonDBTemplate.findById("001", LoadBalancer.class);
+    assertEquals("u1", lb.getUsername());
+    assertEquals("h1", lb.getHostname());
+  }
+
+  @Test
+  public void test_RenameOntoExistingValueIsRejected() throws Exception {
+    writeOldSchemaDocs("{\"id\":\"001\",\"user\":\"u1\"}", "{\"id\":\"002\",\"user\":\"u2\",\"username\":\"already\"}");
+    assertRejectedUnchanged(CollectionSchemaUpdate.update("user", new RenameOperation("username")), "002");
+  }
+
+  @Test
+  public void test_RenameOntoNullValueIsAllowed() throws Exception {
+    writeOldSchemaDocs("{\"id\":\"001\",\"user\":\"u1\",\"username\":null}");
+    jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("user", new RenameOperation("username")), LoadBalancer.class);
+    assertEquals("u1", jsonDBTemplate.findById("001", LoadBalancer.class).getUsername());
+  }
+
+  @Test
+  public void test_RenameToUnknownPropertyIsRejected() throws Exception {
+    writeOldSchemaFile("user", "hostname");
+    assertRejectedUnchanged(CollectionSchemaUpdate.update("user", new RenameOperation("usrname")), "usrname");
+  }
+
+  @Test
+  public void test_AddOfUnknownPropertyIsRejected() throws Exception {
+    writeOldSchemaFile("username", "hostname");
+    assertRejectedUnchanged(CollectionSchemaUpdate.update("extra", new AddOperation("x", false)), "extra");
+  }
+
+  @Test
+  public void test_DeleteOfClassPropertyIsRejected() throws Exception {
+    writeOldSchemaFile("username", "hostname");
+    assertRejectedUnchanged(CollectionSchemaUpdate.update("username", new DeleteOperation()), "username");
+  }
+
+  @Test
+  public void test_SecretAddWithoutCipherIsRejected() throws Exception {
+    writeOldSchemaFile("username", "hostname");
+    assertRejectedUnchanged(CollectionSchemaUpdate.update("osName", new AddOperation("x", true)), "cipher");
+  }
+
+  /**
+   * Add fills only documents where the key is missing or null, as the CollectionSchemaUpdate javadoc says
    */
   @Test
-  public void test_FailedSchemaUpdateReleasesLock() throws Exception {
+  public void test_AddKeepsExistingValues() throws Exception {
+    writeOldSchemaDocs("{\"id\":\"001\",\"username\":\"u1\"}", "{\"id\":\"002\",\"username\":\"u2\",\"osName\":\"win\"}",
+        "{\"id\":\"003\",\"username\":\"u3\",\"osName\":null}");
+    jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("osName", new AddOperation("mac", false)), LoadBalancer.class);
+    assertEquals("mac", jsonDBTemplate.findById("001", LoadBalancer.class).getOsName());
+    assertEquals("win", jsonDBTemplate.findById("002", LoadBalancer.class).getOsName());
+    assertEquals("mac", jsonDBTemplate.findById("003", LoadBalancer.class).getOsName());
+  }
+
+  /**
+   * Reading the collection file fails: the collection lock and the file lock must both be released,
+   * so the collection works again once the file is back
+   */
+  @Test
+  public void test_UnreadableFileReleasesLocks() throws Exception {
     writeOldSchemaFile("user", "hostname");
-    // Replace the collection file with a non-empty directory so the rewrite cannot be moved into place
+    byte[] original = java.nio.file.Files.readAllBytes(loadbalancerJson.toPath());
     assertTrue(loadbalancerJson.delete());
     assertTrue(loadbalancerJson.mkdir());
-    assertTrue(new File(loadbalancerJson, "blocker").createNewFile());
 
     try {
       jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("user", new RenameOperation("username")),
@@ -198,6 +296,34 @@ public class CollectionSchemaUpdateTests {
       // Failing is the correct outcome
     }
     assertFalse("collection write lock is still held", collectionLock("loadbalancer").isWriteLocked());
+
+    assertTrue(loadbalancerJson.delete());
+    java.nio.file.Files.write(loadbalancerJson.toPath(), original);
+    jsonDBTemplate.reloadCollection("loadbalancer");
+    assertEquals(3, jsonDBTemplate.findAll(LoadBalancer.class).size());
+  }
+
+  /**
+   * Writing the rewritten file fails after it was read: the collection lock must be released and
+   * the file left as it was
+   */
+  @Test
+  public void test_FailedWriteReleasesLock() throws Exception {
+    writeOldSchemaFile("user", "hostname");
+    byte[] before = java.nio.file.Files.readAllBytes(loadbalancerJson.toPath());
+    // A read-only database folder lets the file be read but not the temporary file be created
+    assertTrue(dbFilesFolder.setWritable(false));
+    try {
+      jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("user", new RenameOperation("username")),
+          LoadBalancer.class);
+      fail("Expected the schema update to fail");
+    } catch (JsonDBException expected) {
+      // Failing is the correct outcome
+    } finally {
+      assertTrue(dbFilesFolder.setWritable(true));
+    }
+    assertFalse("collection write lock is still held", collectionLock("loadbalancer").isWriteLocked());
+    assertArrayEquals(before, java.nio.file.Files.readAllBytes(loadbalancerJson.toPath()));
   }
 
   @Test

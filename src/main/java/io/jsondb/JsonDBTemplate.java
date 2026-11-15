@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -53,6 +54,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.jsondb.crypto.CryptoUtil;
@@ -455,10 +457,47 @@ public class JsonDBTemplate implements JsonDBOperations {
       return;
     }
 
-    Map<String, Object> addValues = new LinkedHashMap<String, Object>();
+    ObjectMapper objectMapper = dbConfig.getObjectMapper();
+    Set<String> classProperties = new HashSet<String>();
+    for (BeanPropertyDefinition property : objectMapper.getDeserializationConfig()
+        .introspect(objectMapper.constructType(cmd.getClazz())).findProperties()) {
+      classProperties.add(property.getName());
+    }
+    // Reject an update that would silently lose data before anything is read or written
+    for (Entry<String, RenameOperation> renEntry : renOps.entrySet()) {
+      String newName = renEntry.getValue().getNewName();
+      if (!classProperties.contains(newName)) {
+        throw new InvalidJsonDbApiUsageException("Cannot rename '" + renEntry.getKey() + "' to '" + newName + "' in collection "
+            + collectionName + ": " + cmd.getClazz().getSimpleName() + " has no property '" + newName + "', so the values would be lost");
+      }
+    }
+    Map<String, JsonNode> addValues = new LinkedHashMap<String, JsonNode>();
     for (Entry<String, AddOperation> addEntry : addOps.entrySet()) {
+      String fieldName = addEntry.getKey();
       AddOperation op = addEntry.getValue();
-      addValues.put(addEntry.getKey(), op.isSecret() ? dbConfig.getCipher().encrypt((String)op.getDefaultValue()) : op.getDefaultValue());
+      if (!classProperties.contains(fieldName)) {
+        throw new InvalidJsonDbApiUsageException("Cannot add '" + fieldName + "' to collection " + collectionName + ": "
+            + cmd.getClazz().getSimpleName() + " has no property '" + fieldName + "'");
+      }
+      Object value = op.getDefaultValue();
+      if (op.isSecret()) {
+        if (!encrypted) {
+          throw new InvalidJsonDbApiUsageException("Cannot add secret '" + fieldName + "' to collection " + collectionName
+              + ": this JsonDBTemplate has no cipher");
+        }
+        if (!(value instanceof String)) {
+          throw new InvalidJsonDbApiUsageException("Cannot add secret '" + fieldName + "' to collection " + collectionName
+              + ": the default value of a secret must be a String");
+        }
+        value = dbConfig.getCipher().encrypt((String) value);
+      }
+      addValues.put(fieldName, objectMapper.valueToTree(value));
+    }
+    for (String deleteKey : delOps.keySet()) {
+      if (classProperties.contains(deleteKey)) {
+        throw new InvalidJsonDbApiUsageException("Cannot delete '" + deleteKey + "' from collection " + collectionName + ": "
+            + cmd.getClazz().getSimpleName() + " still has that property");
+      }
     }
 
     cmd.getCollectionLock().writeLock().lock();
@@ -466,60 +505,71 @@ public class JsonDBTemplate implements JsonDBOperations {
       // The operations are applied to the JSON stored in the file, not to the in-memory objects. Those
       // are already instances of the new class and have lost any key it does not know, which is
       // exactly what a renamed field looks like, so renaming them lost the data (issue #57).
-      ObjectMapper objectMapper = dbConfig.getObjectMapper();
       ObjectReader reader = objectMapper.readerFor(cmd.getClazz()).without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
       File collectionFile = fileObjectsRef.get().get(collectionName);
       List<Object> documents = new ArrayList<Object>();
-      for (ObjectNode document : readStoredDocuments(collectionFile)) {
-        for (Entry<String, RenameOperation> renEntry : renOps.entrySet()) {
-          JsonNode value = document.remove(renEntry.getKey());
-          if (null != value) {
-            document.set(renEntry.getValue().getNewName(), value);
+      Set<String> conflictingIds = new LinkedHashSet<String>();
+      JsonReader jr = new JsonReader(dbConfig, collectionFile);
+      try {
+        String line = jr.readLine();
+        int lineNo = 1;
+        while ((line = jr.readLine()) != null) {
+          lineNo++;
+          if (line.trim().isEmpty()) {
+            continue;
           }
-        }
-        for (Entry<String, Object> addEntry : addValues.entrySet()) {
-          JsonNode existing = document.get(addEntry.getKey());
-          if (null == existing || existing.isNull()) {
-            document.set(addEntry.getKey(), objectMapper.valueToTree(addEntry.getValue()));
+          JsonNode node = objectMapper.readTree(line);
+          if (!(node instanceof ObjectNode)) {
+            throw new JsonDBException("Line " + lineNo + " of collection file " + collectionFile.getName() + " is not a JSON object");
           }
+          ObjectNode document = (ObjectNode) node;
+          // Take every renamed value out before setting any, so swaps and chains do not overwrite each other
+          Map<String, JsonNode> renamedValues = new LinkedHashMap<String, JsonNode>();
+          for (Entry<String, RenameOperation> renEntry : renOps.entrySet()) {
+            JsonNode value = document.remove(renEntry.getKey());
+            if (null != value) {
+              renamedValues.put(renEntry.getValue().getNewName(), value);
+            }
+          }
+          for (Entry<String, JsonNode> renamed : renamedValues.entrySet()) {
+            JsonNode existing = document.get(renamed.getKey());
+            if (null != existing && !existing.isNull()) {
+              conflictingIds.add(document.path(cmd.getIdAnnotatedFieldName()).asText());
+            }
+            document.set(renamed.getKey(), renamed.getValue());
+          }
+          for (Entry<String, JsonNode> addEntry : addValues.entrySet()) {
+            JsonNode existing = document.get(addEntry.getKey());
+            if (null == existing || existing.isNull()) {
+              document.set(addEntry.getKey(), addEntry.getValue());
+            }
+          }
+          for (String deleteKey : delOps.keySet()) {
+            document.remove(deleteKey);
+          }
+          // Mapping onto the class also drops any other key the class no longer has
+          documents.add(reader.readValue(document));
         }
-        for (String deleteKey : delOps.keySet()) {
-          document.remove(deleteKey);
-        }
-        // Mapping onto the class also drops any other key the class no longer has
-        documents.add(reader.readValue(document));
+      } finally {
+        jr.close();
+      }
+      if (!conflictingIds.isEmpty()) {
+        throw new InvalidJsonDbApiUsageException("Cannot apply the renames to collection " + collectionName
+            + ": the new property already has a value in documents with id " + conflictingIds);
       }
 
       JsonWriter jw = new JsonWriter(dbConfig, cmd, collectionName, collectionFile);
       if (!jw.reWriteJsonFile(documents, true)) {
         throw new JsonDBException("Failed to save the schema update for collection " + collectionName);
       }
+      // Reload while still holding the lock so no other operation sees, or writes back, the old objects
+      reloadCollection(collectionName);
     } catch (IOException e) {
       logger.error("Failed to update the schema of collection " + collectionName, e);
       throw new JsonDBException("Failed to update the schema of collection " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
     }
-    reloadCollection(collectionName);
-  }
-
-  /**
-   * Reads every document of a collection file as a JSON tree, skipping the schema version line
-   */
-  private List<ObjectNode> readStoredDocuments(File collectionFile) throws IOException {
-    List<ObjectNode> documents = new ArrayList<ObjectNode>();
-    JsonReader jr = new JsonReader(dbConfig, collectionFile);
-    try {
-      String line = jr.readLine();
-      while ((line = jr.readLine()) != null) {
-        if (!line.trim().isEmpty()) {
-          documents.add((ObjectNode) dbConfig.getObjectMapper().readTree(line));
-        }
-      }
-    } finally {
-      jr.close();
-    }
-    return documents;
   }
 
   /* (non-Javadoc)
