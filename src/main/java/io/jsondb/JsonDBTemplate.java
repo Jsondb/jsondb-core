@@ -52,6 +52,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.jsondb.crypto.CryptoUtil;
@@ -444,87 +445,81 @@ public class JsonDBTemplate implements JsonDBOperations {
     if((null == cmd) || (null == collection)) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
-    boolean reloadCollectionAsSomethingChanged = false;
-    //We only take care of ADD and RENAME, the deletes will be taken care of automatically.
-    if (null != update) {
-      Map<String, RenameOperation> renOps = update.getRenameOperations();
-      if (renOps.size() > 0) {
-        reloadCollectionAsSomethingChanged = true;
-        cmd.getCollectionLock().writeLock().lock();
-        
-        for(Entry<String, RenameOperation> updateEntry: renOps.entrySet()) {
-          String oldKey = updateEntry.getKey();
-          
-          RenameOperation op = updateEntry.getValue();
-          String newKey = op.getNewName();
-
-          JsonWriter jw;
-          try {
-            jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
-          } catch (IOException ioe) {
-            logger.error("Failed to obtain writer for " + collectionName, ioe);
-            throw new JsonDBException("Failed to save " + collectionName, ioe);
-          }
-          jw.renameKeyInJsonFile(collection.values(), true, oldKey, newKey);
-        }
-        cmd.getCollectionLock().writeLock().unlock();
-      }
-      
-      Map<String, AddOperation> addOps = update.getAddOperations();
-      if (addOps.size() > 0) {
-        reloadCollectionAsSomethingChanged = true;
-        cmd.getCollectionLock().writeLock().lock();
-        
-        for(Entry<String, AddOperation> updateEntry: addOps.entrySet()) {
-          AddOperation op = updateEntry.getValue();
-          
-          Object value = null;
-          if (op.isSecret()) {
-            value = dbConfig.getCipher().encrypt((String)op.getDefaultValue());
-          } else {
-            value = op.getDefaultValue();
-          }
-          
-          String fieldName = updateEntry.getKey();
-          Method setterMethod = cmd.getSetterMethodForFieldName(fieldName);
-          for(T object : collection.values()) {
-            Util.setFieldValueForEntity(object, value, setterMethod);
-          }
-        }
-        
-        JsonWriter jw;
-        try {
-          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
-        } catch (IOException ioe) {
-          logger.error("Failed to obtain writer for " + collectionName, ioe);
-          throw new JsonDBException("Failed to save " + collectionName, ioe);
-        }
-        jw.reWriteJsonFile(collection.values(), true);
-        cmd.getCollectionLock().writeLock().unlock();
-      }
-      
-      Map<String, DeleteOperation> delOps = update.getDeleteOperations();
-      if ((renOps.size() < 1 && addOps.size() < 1) && (delOps.size() > 0)) {
-        //There were no ADD operations but there are some DELETE operations so we have to just flush the collection once
-        //This would not have been necessary if there was even 1 ADD operation
-        
-        reloadCollectionAsSomethingChanged = true;
-        cmd.getCollectionLock().writeLock().lock();
-        
-        JsonWriter jw;
-        try {
-          jw = new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
-        } catch (IOException ioe) {
-          logger.error("Failed to obtain writer for " + collectionName, ioe);
-          throw new JsonDBException("Failed to save " + collectionName, ioe);
-        }
-        jw.reWriteJsonFile(collection.values(), true);
-        cmd.getCollectionLock().writeLock().unlock();
-      }
-      if (reloadCollectionAsSomethingChanged) {
-        reloadCollection(collectionName);
-      }
+    if (null == update) {
+      return;
     }
+    Map<String, RenameOperation> renOps = update.getRenameOperations();
+    Map<String, AddOperation> addOps = update.getAddOperations();
+    Map<String, DeleteOperation> delOps = update.getDeleteOperations();
+    if (renOps.isEmpty() && addOps.isEmpty() && delOps.isEmpty()) {
+      return;
+    }
+
+    Map<String, Object> addValues = new LinkedHashMap<String, Object>();
+    for (Entry<String, AddOperation> addEntry : addOps.entrySet()) {
+      AddOperation op = addEntry.getValue();
+      addValues.put(addEntry.getKey(), op.isSecret() ? dbConfig.getCipher().encrypt((String)op.getDefaultValue()) : op.getDefaultValue());
+    }
+
+    cmd.getCollectionLock().writeLock().lock();
+    try {
+      // The operations are applied to the JSON stored in the file, not to the in-memory objects. Those
+      // are already instances of the new class and have lost any key it does not know, which is
+      // exactly what a renamed field looks like, so renaming them lost the data (issue #57).
+      ObjectMapper objectMapper = dbConfig.getObjectMapper();
+      ObjectReader reader = objectMapper.readerFor(cmd.getClazz()).without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+      File collectionFile = fileObjectsRef.get().get(collectionName);
+      List<Object> documents = new ArrayList<Object>();
+      for (ObjectNode document : readStoredDocuments(collectionFile)) {
+        for (Entry<String, RenameOperation> renEntry : renOps.entrySet()) {
+          JsonNode value = document.remove(renEntry.getKey());
+          if (null != value) {
+            document.set(renEntry.getValue().getNewName(), value);
+          }
+        }
+        for (Entry<String, Object> addEntry : addValues.entrySet()) {
+          JsonNode existing = document.get(addEntry.getKey());
+          if (null == existing || existing.isNull()) {
+            document.set(addEntry.getKey(), objectMapper.valueToTree(addEntry.getValue()));
+          }
+        }
+        for (String deleteKey : delOps.keySet()) {
+          document.remove(deleteKey);
+        }
+        // Mapping onto the class also drops any other key the class no longer has
+        documents.add(reader.readValue(document));
+      }
+
+      JsonWriter jw = new JsonWriter(dbConfig, cmd, collectionName, collectionFile);
+      if (!jw.reWriteJsonFile(documents, true)) {
+        throw new JsonDBException("Failed to save the schema update for collection " + collectionName);
+      }
+    } catch (IOException e) {
+      logger.error("Failed to update the schema of collection " + collectionName, e);
+      throw new JsonDBException("Failed to update the schema of collection " + collectionName, e);
+    } finally {
+      cmd.getCollectionLock().writeLock().unlock();
+    }
+    reloadCollection(collectionName);
+  }
+
+  /**
+   * Reads every document of a collection file as a JSON tree, skipping the schema version line
+   */
+  private List<ObjectNode> readStoredDocuments(File collectionFile) throws IOException {
+    List<ObjectNode> documents = new ArrayList<ObjectNode>();
+    JsonReader jr = new JsonReader(dbConfig, collectionFile);
+    try {
+      String line = jr.readLine();
+      while ((line = jr.readLine()) != null) {
+        if (!line.trim().isEmpty()) {
+          documents.add((ObjectNode) dbConfig.getObjectMapper().readTree(line));
+        }
+      }
+    } finally {
+      jr.close();
+    }
+    return documents;
   }
 
   /* (non-Javadoc)
