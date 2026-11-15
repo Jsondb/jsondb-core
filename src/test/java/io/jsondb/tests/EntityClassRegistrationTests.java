@@ -45,6 +45,7 @@ import io.jsondb.crypto.Default1Cipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.tests.duplicates.DuplicateInstance;
 import io.jsondb.tests.model.Instance;
+import io.jsondb.tests.noid.DocumentWithoutId;
 import io.jsondb.tests.model.Site;
 import io.jsondb.tests.model.Volume;
 
@@ -134,5 +135,22 @@ public class EntityClassRegistrationTests {
     expectedException.expect(InvalidJsonDbApiUsageException.class);
     expectedException.expectMessage("Collection name 'instances' is used by both");
     new JsonDBTemplate(dbFilesLocation, Arrays.<Class<?>>asList(Instance.class, DuplicateInstance.class));
+  }
+
+  /**
+   * A @Document class without JsonDB's @Id used to fail with a bare NullPointerException (issue #23)
+   */
+  @Test
+  public void testClassWithoutIdAnnotationIsRejectedClearly() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("DocumentWithoutId has no field annotated with @io.jsondb.annotation.Id");
+    new JsonDBTemplate(dbFilesLocation, Collections.<Class<?>>singletonList(DocumentWithoutId.class));
+  }
+
+  @Test
+  public void testScannedClassWithoutIdAnnotationIsRejectedClearly() {
+    expectedException.expect(InvalidJsonDbApiUsageException.class);
+    expectedException.expectMessage("DocumentWithoutId has no field annotated with @io.jsondb.annotation.Id");
+    new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.noid");
   }
 }

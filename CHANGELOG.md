@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- A `@Document` class without JsonDB's `@Id` annotation, for example one using `javax.persistence.Id`, failed with a bare `NullPointerException`. It now fails with an `InvalidJsonDbApiUsageException` naming the class and the annotation it needs. (#23)
+
 ### Changes
 
 - JsonDB no longer logs routine messages at INFO. "Encryption is (not) enabled" and the backup and restore notices are now DEBUG, so they don't appear with default logging settings. (#56)
