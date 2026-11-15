@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -22,6 +22,9 @@ package io.jsondb.tests;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -37,6 +40,7 @@ import org.junit.rules.ExpectedException;
 import com.google.common.io.Files;
 
 import io.jsondb.InvalidJsonDbApiUsageException;
+import io.jsondb.JsonDBException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
@@ -73,6 +77,67 @@ public class InsertTests {
   @After
   public void tearDown() throws Exception {
     Util.delete(dbFilesFolder);
+  }
+
+  /**
+   * Replaces the collection file with a non-empty directory of the same name, so that
+   * moving the rewritten temporary file over it fails.
+   */
+  private void makeCollectionFileUnreplaceable() throws Exception {
+    assertTrue(instancesJson.delete());
+    assertTrue(instancesJson.mkdir());
+    assertTrue(new File(instancesJson, "blocker").createNewFile());
+  }
+
+  private List<String> leftoverTempFiles() {
+    List<String> names = new ArrayList<String>();
+    for (String name : dbFilesFolder.list()) {
+      if (name.endsWith(".tmp")) {
+        names.add(name);
+      }
+    }
+    return names;
+  }
+
+  /**
+   * When the rewritten collection file cannot be moved into place the insert must fail
+   * loudly and leave memory unchanged, not report success (issue #15)
+   */
+  @Test
+  public void testInsertFailsWhenCollectionFileCannotBeReplaced() throws Exception {
+    makeCollectionFileUnreplaceable();
+    Instance instance = new Instance();
+    instance.setId("07");
+    instance.setHostname("ec2-54-191-07");
+
+    try {
+      jsonDBTemplate.insert(instance);
+      fail("Expected insert to fail when the collection file cannot be replaced");
+    } catch (JsonDBException expected) {
+      // Failing loudly is the correct outcome
+    }
+    assertNull(jsonDBTemplate.findById("07", Instance.class));
+    assertEquals(6, jsonDBTemplate.findAll(Instance.class).size());
+    assertEquals(new ArrayList<String>(), leftoverTempFiles());
+  }
+
+  /**
+   * Same as above for an update, which goes through a different JsonWriter method
+   */
+  @Test
+  public void testSaveFailsWhenCollectionFileCannotBeReplaced() throws Exception {
+    makeCollectionFileUnreplaceable();
+    Instance instance = jsonDBTemplate.findById("03", Instance.class);
+    instance.setHostname("ec2-54-191-04_Updated");
+
+    try {
+      jsonDBTemplate.save(instance, Instance.class);
+      fail("Expected save to fail when the collection file cannot be replaced");
+    } catch (JsonDBException expected) {
+      // Failing loudly is the correct outcome
+    }
+    assertEquals("ec2-54-191-04", jsonDBTemplate.findById("03", Instance.class).getHostname());
+    assertEquals(new ArrayList<String>(), leftoverTempFiles());
   }
 
   @Test
