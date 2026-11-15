@@ -73,6 +73,12 @@ public class CollectionMetaData {
 
     //Populate the class metadata
     setupClassMetadata(clazz);
+    if (null == idAnnotatedFieldName) {
+      // Another framework's @Id, e.g. javax.persistence.Id, is the usual cause (issue #23)
+      throw new InvalidJsonDbApiUsageException("Collection class " + clazz.getName()
+          + " has no field annotated with @io.jsondb.annotation.Id; every @Document class needs one."
+          + " Other @Id annotations such as javax.persistence.Id are not recognised.");
+    }
 
     //Without java.beans (Android) JXPath cannot introspect the class, so queries need this handler
     ReflectionPropertyHandler.registerIfJavaBeansMissing(clazz);
