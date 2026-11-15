@@ -51,6 +51,17 @@ public class DefaultAESCipherTests {
     @SuppressWarnings("unused")
     DefaultAESCBCCipher cipher = new DefaultAESCBCCipher("badkey", "UTF-8");
   }
+
+  /**
+   * The error from the JCE says what is wrong with the key; it used to be only logged, not passed on
+   */
+  @Test
+  public void testInvalidKeyKeepsTheReasonAsCause() throws UnsupportedEncodingException, GeneralSecurityException {
+    expectedException.expect(InvalidKeyException.class);
+    expectedException.expectCause(IsInstanceOf.any(GeneralSecurityException.class));
+
+    new DefaultAESCBCCipher("badkey", "UTF-8");
+  }
   
   @Test
   public void testKeyAesCbc() throws UnsupportedEncodingException, GeneralSecurityException {
