@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -48,6 +48,7 @@ import io.jsondb.Util;
 import io.jsondb.crypto.DefaultAESCBCCipher;
 import io.jsondb.crypto.ICipher;
 import io.jsondb.events.CollectionFileChangeListener;
+import io.jsondb.events.CollectionFileChangeAdapter;
 import io.jsondb.tests.model.Instance;
 import io.jsondb.tests.model.PojoWithEnumFields;
 import io.jsondb.tests.util.TestUtils;
@@ -239,5 +240,38 @@ public class FileChangeListenerTests {
 
     jsonDBTemplate.removeCollectionFileChangeListener(listener);
     assertFalse(jsonDBTemplate.hasCollectionFileChangeListener());
+  }
+
+  /**
+   * After the last listener is removed the watcher stops. Adding a listener again must start a new
+   * watcher; it used to stay stopped, so the new listener never received any event.
+   */
+  @Test
+  public void testListenerAddedAfterAllWereRemovedStillReceivesEvents() {
+    CollectionFileChangeListener first = new CollectionFileChangeAdapter() {};
+    jsonDBTemplate.addCollectionFileChangeListener(first);
+    jsonDBTemplate.removeCollectionFileChangeListener(first);
+    assertFalse(jsonDBTemplate.hasCollectionFileChangeListener());
+
+    jsonDBTemplate.addCollectionFileChangeListener(new CollectionFileChangeAdapter() {
+      @Override
+      public void collectionFileAdded(String collectionName) {
+        jsonDBTemplate.reloadCollection(collectionName);
+      }
+    });
+
+    assertFalse(jsonDBTemplate.collectionExists(Instance.class));
+    try {
+      Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+    } catch (IOException e1) {
+      fail("Failed to copy data store files");
+    }
+    try {
+      // Give it some time to reload DB
+      Thread.sleep(DB_RELOAD_TIMEOUT);
+    } catch (InterruptedException e) {
+      fail("Failed to wait for db reload");
+    }
+    assertTrue(jsonDBTemplate.collectionExists(Instance.class));
   }
 }

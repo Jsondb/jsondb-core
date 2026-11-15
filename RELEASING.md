@@ -66,5 +66,9 @@ The code is compiled for Java 8 and must keep working there. `./gradlew testOnJa
    ```
 
    The script checks that the current commit builds that version, tags it `v1.1.0`, pushes the tag, and creates the release from the `## 1.1.0` section of `CHANGELOG.md` if there is one, otherwise from `## Unreleased`, marked **Latest**. It needs `gh` signed in with write access to the repository.
-8. In a follow-up PR, rename `## Unreleased` in `CHANGELOG.md` to the version that was published, e.g. `## 1.1.4`, and add a new empty `## Unreleased` section above it.
+8. In one follow-up PR:
+   - rename `## Unreleased` in `CHANGELOG.md` to the version that was published, e.g. `## 1.1.4`, and add a new empty `## Unreleased` section above it;
+   - update the version in the **Installation** section of `Readme.md`, in both the Maven and the Gradle snippet.
+
+   `scripts/github-release.sh` prints this checklist when it finishes.
 9. Update the version on the website's download page.

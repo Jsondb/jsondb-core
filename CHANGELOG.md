@@ -5,6 +5,10 @@
 ### Bug fixes
 
 - **Documents inserted without an id could be lost.** JsonDB generated an id for them but stored them under `null` instead of that id, so a second document without an id replaced the first in memory, and the next write dropped it from the file. `findById()` couldn't find them by their generated id either, and a batch `insert()`/`upsert()` of several such documents failed with "Duplicate object with id: null". Documents are now stored under their generated id.
+- Nine operations (`insert`, `save`, `upsert` and `remove`, single and batch, plus `reloadCollection` and `isCollectionReadonly`) failed with a bare `NullPointerException` when given a collection name that no `@Document` class has, e.g. a typo. They now fail with an `InvalidJsonDbApiUsageException` naming the collection, like the other operations.
+- Removing a file-change listener when none was registered threw `NullPointerException`.
+- After the last file-change listener was removed, adding a listener again never restarted the file watcher, so the new listener received no events.
+- The file watcher thread read the listener list without synchronisation, so adding or removing a listener while an event was being delivered could fail.
 
 ## 1.1.16
 
