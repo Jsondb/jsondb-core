@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 jobs:
   build:
@@ -31,7 +31,6 @@ jobs:
             - ~/.gradle/wrapper
 
 workflows:
-  version: 2
   workflow:
     jobs:
       - build
