@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -24,6 +24,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -205,13 +206,18 @@ public class CollectionMetaData {
   }*/
 
   /**
-   * A utility builder method to scan through the specified package and find all classes/POJOs
-   * that are annotated with the @Document annotation.
+   * A utility builder method that builds the metadata for every collection class/POJO. The classes
+   * are the explicitly registered entity classes when the config has them, otherwise all classes
+   * annotated with the @Document annotation found by scanning the baseScanPackage.
    *
-   * @param dbConfig the object that holds all the baseScanPackage and other settings.
+   * @param dbConfig the object that holds the entity classes or baseScanPackage and other settings.
    * @return A Map of collection classes/POJOs
    */
   public static Map<String, CollectionMetaData> builder(JsonDBConfig dbConfig) {
+    Collection<Class<?>> entityClasses = dbConfig.getEntityClasses();
+    if (null != entityClasses) {
+      return builderForEntityClasses(entityClasses, dbConfig);
+    }
     Map<String, CollectionMetaData> collectionMetaData = new LinkedHashMap<String, CollectionMetaData>();
     Reflections reflections = new Reflections(dbConfig.getBaseScanPackage());
     Set<Class<?>> docClasses = reflections.getTypesAnnotatedWith(Document.class);
@@ -221,6 +227,25 @@ public class CollectionMetaData {
       String version = d.schemaVersion();
       CollectionMetaData cmd = new CollectionMetaData(collectionName, c, version, dbConfig.getSchemaComparator());
       collectionMetaData.put(collectionName, cmd);
+    }
+    return collectionMetaData;
+  }
+
+  private static Map<String, CollectionMetaData> builderForEntityClasses(Collection<Class<?>> entityClasses,
+      JsonDBConfig dbConfig) {
+    Map<String, CollectionMetaData> collectionMetaData = new LinkedHashMap<String, CollectionMetaData>();
+    for (Class<?> c : entityClasses) {
+      String collectionName = Util.determineCollectionName(c);
+      CollectionMetaData existing = collectionMetaData.get(collectionName);
+      if (null != existing) {
+        if (existing.getClazz().equals(c)) {
+          continue;
+        }
+        throw new InvalidJsonDbApiUsageException("Collection name '" + collectionName + "' is used by both "
+            + existing.getClazz().getName() + " and " + c.getName());
+      }
+      String version = c.getAnnotation(Document.class).schemaVersion();
+      collectionMetaData.put(collectionName, new CollectionMetaData(collectionName, c, version, dbConfig.getSchemaComparator()));
     }
     return collectionMetaData;
   }
