@@ -10,9 +10,11 @@
 ### New
 
 - `count(Class)` and `count(String collectionName)` return the number of documents in a collection without copying them, as `findAll()` does. (#54)
+- `JsonDBTemplate` is now `AutoCloseable`. `close()` stops its file-change watcher and removes its JVM shutdown hook, which every instance used to leak, and releases its folder (see below). (#51)
 
 ### Changes
 
+- JsonDB now logs a warning when a second `JsonDBTemplate` opens a folder that another instance in the same JVM already has open. Two instances on one folder each rewrite the files from their own in-memory copy and lose each other's writes. Share one instance between threads (it is thread-safe), or `close()` the other one first. A future release will refuse to open a folder twice. (#51)
 - JsonDB no longer logs routine messages at INFO. "Encryption is (not) enabled" and the backup and restore notices are now DEBUG, so they don't appear with default logging settings. (#56)
 
 ## 1.1.0
