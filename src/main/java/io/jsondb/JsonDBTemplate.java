@@ -142,10 +142,10 @@ public class JsonDBTemplate implements JsonDBOperations {
     this.dbConfig = dbConfig;
     ICipher cipher = dbConfig.getCipher();
     if (null == cipher) {
-      logger.info("Encryption is not enabled for JSON DB");
+      logger.debug("Encryption is not enabled for JSON DB");
       this.encrypted = false;
     } else {
-      logger.info("Encryption is enabled for JSON DB");
+      logger.debug("Encryption is enabled for JSON DB");
       this.encrypted = true;
     }
     initialize();
@@ -1785,7 +1785,7 @@ public class JsonDBTemplate implements JsonDBOperations {
     lockAllCollectionsWrite();
     try {
       JsonDbArchive.createBackupZip(dbDirectory, zipFile);
-      logger.info("Created JsonDB backup at {}", zipFile.getAbsolutePath());
+      logger.debug("Created JsonDB backup at {}", zipFile.getAbsolutePath());
     } catch (IOException e) {
       logger.error("Failed to create JsonDB backup at {}", zipFile.getAbsolutePath(), e);
       throw new JsonDBException("Failed to create JsonDB backup at " + zipFile.getAbsolutePath(), e);
@@ -1821,7 +1821,7 @@ public class JsonDBTemplate implements JsonDBOperations {
     try {
       JsonDbArchive.extractReplaceCollectionFiles(dbDirectory, zipFile);
       reLoadDB();
-      logger.info("Restored JsonDB from backup {} (replace mode)", zipFile.getAbsolutePath());
+      logger.debug("Restored JsonDB from backup {} (replace mode)", zipFile.getAbsolutePath());
     } catch (IOException e) {
       logger.error("Failed to restore JsonDB from backup {}", zipFile.getAbsolutePath(), e);
       throw new JsonDBException("Failed to restore JsonDB from backup " + zipFile.getAbsolutePath(), e);
@@ -1856,7 +1856,7 @@ public class JsonDBTemplate implements JsonDBOperations {
           reloadCollection(collectionName);
         }
       }
-      logger.info("Restored JsonDB from backup {} (merge mode)", zipFile.getAbsolutePath());
+      logger.debug("Restored JsonDB from backup {} (merge mode)", zipFile.getAbsolutePath());
     } catch (IOException e) {
       logger.error("Failed to merge JsonDB from backup {}", zipFile.getAbsolutePath(), e);
       throw new JsonDBException("Failed to merge JsonDB from backup " + zipFile.getAbsolutePath(), e);
