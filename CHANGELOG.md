@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.16
+
 ### Bug fixes
 
 - Changing a document's `@Id` with `findAndModify()` or `findAllAndModify()` left the original document in place and added a copy under the new id. Such an update is now rejected with `InvalidJsonDbApiUsageException`; remove the document and insert it with the new id instead. Setting the id to its current value is still allowed. (#78)
