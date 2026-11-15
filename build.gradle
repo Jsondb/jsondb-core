@@ -53,7 +53,7 @@ ext {
     jxpathVersion = '1.4.0'
     reflectionsVersion = '0.10.2'
     junitVersion = '4.13.2'
-    hamcrestVersion = '2.2'
+    hamcrestVersion = '3.0'
 }
 
 // One artifact for every supported Java version: the build runs on JDK 17, but the code is compiled
