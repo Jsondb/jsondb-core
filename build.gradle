@@ -93,6 +93,8 @@ dependencies {
 
     testImplementation "junit:junit:${junitVersion}",
             "org.hamcrest:hamcrest-library:${hamcrestVersion}"
+    // A logging backend for the tests that check what JsonDB logs; see src/test/resources/simplelogger.properties
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
 
 tasks.withType(JavaCompile).configureEach {
