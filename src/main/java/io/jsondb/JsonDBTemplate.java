@@ -177,6 +177,18 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     Runtime.getRuntime().addShutdownHook(shutdownHook);
   }
 
+  /**
+   * Returns the metadata of the collection, rejecting a name that no @Document class has (e.g. a typo)
+   */
+  private CollectionMetaData metaDataFor(String collectionName) {
+    CollectionMetaData cmd = cmdMap.get(collectionName);
+    if (null == cmd) {
+      throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName
+          + "' not found: no class annotated with @Document has that collection name");
+    }
+    return cmd;
+  }
+
   private void registerOpenFolder() {
     File folder = dbConfig.getDbFilesLocation();
     try {
@@ -265,7 +277,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    * @see io.jsondb.JsonDBOperations#reloadCollection(java.lang.String)
    */
   public void reloadCollection(String collectionName) {
-    CollectionMetaData cmd = cmdMap.get(collectionName);
+    CollectionMetaData cmd = metaDataFor(collectionName);
     cmd.getCollectionLock().writeLock().lock();
     try {
       File collectionFile = fileObjectsRef.get().get(collectionName);
@@ -714,7 +726,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    */
   @Override
   public <T> boolean isCollectionReadonly(String collectionName) {
-    CollectionMetaData cmd = cmdMap.get(collectionName);
+    CollectionMetaData cmd = metaDataFor(collectionName);
     return cmd.isReadOnly();
   }
 
@@ -1033,7 +1045,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
     Util.ensureNotRestricted(objectToSave);
     Object objToSave = Util.deepCopy(objectToSave);
-    CollectionMetaData cmd = cmdMap.get(collectionName);
+    CollectionMetaData cmd = metaDataFor(collectionName);
     cmd.getCollectionLock().writeLock().lock();
     try {
       Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
@@ -1088,7 +1100,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     if (null == batchToSave) {
       throw new InvalidJsonDbApiUsageException("Null Object batch cannot be inserted into DB");
     }
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    CollectionMetaData collectionMeta = metaDataFor(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
       Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
@@ -1153,7 +1165,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
     Util.ensureNotRestricted(objectToSave);
     Object objToSave = Util.deepCopy(objectToSave);
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    CollectionMetaData collectionMeta = metaDataFor(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
       @SuppressWarnings("unchecked")
@@ -1222,7 +1234,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
     Util.ensureNotRestricted(objectToRemove);
 
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    CollectionMetaData collectionMeta = metaDataFor(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
       @SuppressWarnings("unchecked")
@@ -1273,7 +1285,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     if (null == batchToRemove) {
       throw new InvalidJsonDbApiUsageException("Null Object batch cannot be removed from DB");
     }
-    CollectionMetaData cmd = cmdMap.get(collectionName);
+    CollectionMetaData cmd = metaDataFor(collectionName);
     cmd.getCollectionLock().writeLock().lock();
     try {
       @SuppressWarnings("unchecked")
@@ -1341,7 +1353,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
     Util.ensureNotRestricted(objectToSave);
     Object objToSave = Util.deepCopy(objectToSave);
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    CollectionMetaData collectionMeta = metaDataFor(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
       Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
@@ -1406,7 +1418,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     if (null == batchToSave) {
       throw new InvalidJsonDbApiUsageException("Null Object batch cannot be upserted into DB");
     }
-    CollectionMetaData collectionMeta = cmdMap.get(collectionName);
+    CollectionMetaData collectionMeta = metaDataFor(collectionName);
     collectionMeta.getCollectionLock().writeLock().lock();
     try {
       Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
