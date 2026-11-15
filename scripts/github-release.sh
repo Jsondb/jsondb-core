@@ -76,3 +76,11 @@ notes="$notes
 git tag -a "v$version" -m "jsondb-core $version"
 git push origin "v$version"
 gh release create "v$version" --verify-tag --latest --title "jsondb-core $version" --notes "$notes"
+
+cat <<EOF
+
+Released v$version. Next, in one follow-up PR (RELEASING.md step 8):
+  - CHANGELOG.md: rename "## Unreleased" to "## $version" and add a new empty "## Unreleased" above it
+  - Readme.md: set the version in the Installation section (Maven and Gradle snippets) to $version
+Then update the version on the website's download page.
+EOF
