@@ -97,7 +97,47 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
 
   public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
-    dbConfig = new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator);
+    this(new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator));
+  }
+
+  /**
+   * Creates a JsonDBTemplate for an explicit list of entity classes instead of scanning a package.
+   * Package scanning cannot see application classes on Android or under OSGi, so use this there.
+   *
+   * @param dbFilesLocationString path to the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   */
+  public JsonDBTemplate(String dbFilesLocationString, Collection<Class<?>> entityClasses) {
+    this(dbFilesLocationString, entityClasses, null, false, null);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, Collection)} with encryption of {@link io.jsondb.annotation.Secret} fields.
+   *
+   * @param dbFilesLocationString path to the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   */
+  public JsonDBTemplate(String dbFilesLocationString, Collection<Class<?>> entityClasses, ICipher cipher) {
+    this(dbFilesLocationString, entityClasses, cipher, false, null);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, Collection)} with every setting.
+   *
+   * @param dbFilesLocationString path to the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   * @param compatibilityMode if true unknown properties in the .json files are ignored
+   * @param schemaComparator comparator for schema versions, or null for the default
+   */
+  public JsonDBTemplate(String dbFilesLocationString, Collection<Class<?>> entityClasses, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(new JsonDBConfig(dbFilesLocationString, entityClasses, cipher, compatibilityMode, schemaComparator));
+  }
+
+  private JsonDBTemplate(JsonDBConfig dbConfig) {
+    this.dbConfig = dbConfig;
+    ICipher cipher = dbConfig.getCipher();
     if (null == cipher) {
       logger.info("Encryption is not enabled for JSON DB");
       this.encrypted = false;
