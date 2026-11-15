@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.beanutils.BeanUtils;
+import org.apache.commons.jxpath.FunctionLibrary;
 import org.apache.commons.jxpath.JXPathContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -177,8 +178,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       }
       Map<Object, ?> collection = loadCollection(collectionFile, collectionName, cmd);
       if (null != collection) {
-        JXPathContext newContext = JXPathContext.newContext(collection.values());
-        contextsRef.get().put(collectionName, newContext);
+        contextsRef.get().put(collectionName, newQueryContext(collection.values()));
         collectionsRef.get().put(collectionName, collection);
       } else {
         //Since this is a reload attempt its possible the .json files have disappeared in the interim a very rare thing
@@ -188,6 +188,20 @@ public class JsonDBTemplate implements JsonDBOperations {
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
     }
+  }
+
+  /**
+   * Creates the JXPath context used to run queries against a collection.
+   *
+   * By default JXPath resolves extension functions to any Java static method or constructor
+   * on the classpath, so a query such as {@code java.lang.Runtime.getRuntime()} would run.
+   * Query strings frequently carry user input, so extension functions are disabled; the core
+   * XPath functions such as contains() and count() are unaffected.
+   */
+  private static JXPathContext newQueryContext(Collection<?> documents) {
+    JXPathContext context = JXPathContext.newContext(documents);
+    context.setFunctions(new FunctionLibrary());
+    return context;
   }
 
   private <T> Map<Object, T> loadCollection(File collectionFile, String collectionName, CollectionMetaData cmd) {
@@ -321,7 +335,7 @@ public class JsonDBTemplate implements JsonDBOperations {
       if (Util.stampVersion(dbConfig, fileObject, cmd.getSchemaVersion())) {
         collection = new LinkedHashMap<Object, T>();
         collectionsRef.get().put(collectionName, collection);
-        contextsRef.get().put(collectionName, JXPathContext.newContext(collection.values())) ;
+        contextsRef.get().put(collectionName, newQueryContext(collection.values()));
         fileObjectsRef.get().put(collectionName, fileObject);
         cmd.setActualSchemaVersion(cmd.getSchemaVersion());
       } else {
