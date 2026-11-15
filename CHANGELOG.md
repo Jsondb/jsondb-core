@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- **Documents inserted without an id could be lost.** JsonDB generated an id for them but stored them under `null` instead of that id, so a second document without an id replaced the first in memory, and the next write dropped it from the file. `findById()` couldn't find them by their generated id either, and a batch `insert()`/`upsert()` of several such documents failed with "Duplicate object with id: null". Documents are now stored under their generated id.
+
 ## 1.1.16
 
 ### Bug fixes

@@ -139,7 +139,9 @@ public class Util {
     Object id = UUID.randomUUID().toString();
     if (null != setterMethodForId) {
       try {
-        id = setterMethodForId.invoke(document, id);
+        // The caller stores the document under the returned id, so return the generated id itself;
+        // the setter's return value is null for an ordinary void setter
+        setterMethodForId.invoke(document, id);
       } catch (IllegalAccessException e) {
         logger.error("Failed to invoke setter method for a idAnnotated field due to permissions", e);
         throw new InvalidJsonDbApiUsageException("Failed to invoke setter method for a idAnnotated field due to permissions", e);
