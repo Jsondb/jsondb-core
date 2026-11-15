@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to 
@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsondb.CollectionMetaData;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBConfig;
+import io.jsondb.JsonDBException;
 import io.jsondb.SchemaVersion;
 
 /**
@@ -132,6 +133,28 @@ public class JsonWriter {
   }
 
   /**
+   * Atomically replaces the collection file with the fully written temporary file.
+   *
+   * If the move fails the collection file is left as it was, so the caller must not apply the
+   * change in memory either. The temporary file is deleted and a JsonDBException is thrown
+   * rather than reporting success (issue #15).
+   */
+  private void moveIntoPlace(File tFile) {
+    try {
+      Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
+    } catch (IOException e) {
+      logger.error("Failed to move temporary collection file {} to collection file {}", tFile.getName(), collectionFile.getName(), e);
+      try {
+        Files.deleteIfExists(tFile.toPath());
+      } catch (IOException de) {
+        logger.error("Failed to delete temporary collection file {}", tFile.getName(), de);
+      }
+      throw new JsonDBException("Failed to save collection " + collectionName
+          + ", could not replace collection file " + collectionFile.getAbsolutePath(), e);
+    }
+  }
+
+  /**
    * A utility method that appends the provided object to the end of collection
    * file in a atomic way
    *
@@ -208,11 +231,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -299,11 +318,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -387,11 +402,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -475,11 +486,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -569,11 +576,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -662,11 +665,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -748,11 +747,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {
@@ -842,11 +837,7 @@ public class JsonWriter {
         }
       }
 
-      try {
-        Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
-      } catch (IOException e) {
-        logger.error("Failed to move temporary collection file {} to collection file {}", tFileName, collectionFile.getName(), e);
-      }
+      moveIntoPlace(tFile);
       return true;
       
     } finally {

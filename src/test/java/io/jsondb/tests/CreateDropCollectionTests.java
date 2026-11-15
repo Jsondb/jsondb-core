@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -25,8 +25,16 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.io.Files;
 
@@ -134,5 +142,46 @@ public class CreateDropCollectionTests {
   @Test(expected=InvalidJsonDbApiUsageException.class)
   public void testDropCollectionForUnknownCollection() {
     jsonDBTemplate.dropCollection("SomeCollection");
+  }
+
+  private ReentrantReadWriteLock collectionLock(String collectionName) throws Exception {
+    Field cmdMapField = JsonDBTemplate.class.getDeclaredField("cmdMap");
+    cmdMapField.setAccessible(true);
+    Map<?, ?> cmdMap = (Map<?, ?>) cmdMapField.get(jsonDBTemplate);
+    Object cmd = cmdMap.get(collectionName);
+    Method getLock = cmd.getClass().getDeclaredMethod("getCollectionLock");
+    getLock.setAccessible(true);
+    return (ReentrantReadWriteLock) getLock.invoke(cmd);
+  }
+
+  /**
+   * A thread that loses the race to create a collection must still release the collection's
+   * write lock, otherwise every later operation on that collection blocks forever
+   */
+  @Test
+  public void testCreateCollectionRaceLoserReleasesLock() throws Exception {
+    ReentrantReadWriteLock lock = collectionLock("sites");
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      // Hold the lock so the second thread passes the "already exists" check and then waits for it
+      lock.writeLock().lock();
+      Future<?> raceLoser;
+      try {
+        raceLoser = executor.submit(() -> jsonDBTemplate.createCollection(Site.class));
+        long deadline = System.currentTimeMillis() + 5000;
+        while (!lock.hasQueuedThreads() && System.currentTimeMillis() < deadline) {
+          Thread.sleep(10);
+        }
+        assertTrue("race loser never queued on the collection lock", lock.hasQueuedThreads());
+        jsonDBTemplate.createCollection(Site.class);
+      } finally {
+        lock.writeLock().unlock();
+      }
+      raceLoser.get(5, TimeUnit.SECONDS);
+
+      assertFalse("collection write lock is still held after createCollection returned", lock.isWriteLocked());
+    } finally {
+      executor.shutdownNow();
+    }
   }
 }

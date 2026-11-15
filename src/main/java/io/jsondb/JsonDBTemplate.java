@@ -308,13 +308,12 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
 
     cmd.getCollectionLock().writeLock().lock();
-
-    // Some other thread might have created same collection when this thread reached this point
-    if(collectionsRef.get().get(collectionName) != null) {
-      return;
-    }
-
     try {
+      // Some other thread might have created same collection when this thread reached this point
+      if(collectionsRef.get().get(collectionName) != null) {
+        return;
+      }
+
       String collectionFileName = collectionName + ".json";
       File fileObject = new File(dbConfig.getDbFilesLocation(), collectionFileName);
       boolean fileCreated;
