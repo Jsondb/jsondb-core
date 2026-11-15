@@ -16,14 +16,25 @@ jobs:
             - gradle-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "build.gradle" }}-{{ checksum "settings.gradle" }}
             - gradle-
       - run:
-          name: Test and publish coverage
+          name: Test
           command: |
             for attempt in 1 2 3; do
-              ./gradlew test jacocoTestReport coverallsJacoco && exit 0
+              ./gradlew test jacocoTestReport && exit 0
               echo "Gradle failed on attempt ${attempt}, retrying in 30s..."
               sleep 30
             done
             exit 1
+      - run:
+          name: Publish coverage to Coveralls
+          # Coveralls' official coverage reporter, pinned and checked against its published checksum.
+          # It replaces the unmaintained coveralls-jacoco Gradle plugin, which put vulnerable versions
+          # of jgit and kotlin-gradle-plugin on the build classpath.
+          command: |
+            curl -sSLO https://github.com/coverallsapp/coverage-reporter/releases/download/v0.6.22/coveralls-linux-x86_64.tar.gz
+            curl -sSLO https://github.com/coverallsapp/coverage-reporter/releases/download/v0.6.22/coveralls-checksums.txt
+            grep ' coveralls-linux-x86_64.tar.gz$' coveralls-checksums.txt | sha256sum -c -
+            tar -xzf coveralls-linux-x86_64.tar.gz coveralls
+            ./coveralls report build/reports/jacoco/test/jacocoTestReport.xml --format=jacoco --base-path=src/main/java
       - save_cache:
           key: gradle-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "build.gradle" }}-{{ checksum "settings.gradle" }}
           paths:
