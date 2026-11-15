@@ -74,6 +74,9 @@ public class CollectionMetaData {
     //Populate the class metadata
     setupClassMetadata(clazz);
 
+    //Without java.beans (Android) JXPath cannot introspect the class, so queries need this handler
+    ReflectionPropertyHandler.registerIfJavaBeansMissing(clazz);
+
     this.idAnnotatedFieldGetterMethod = getterMethodMap.get(idAnnotatedFieldName);
     this.idAnnotatedFieldSetterMethod = setterMethodMap.get(idAnnotatedFieldName);
   }
