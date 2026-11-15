@@ -24,7 +24,7 @@ buildscript {
             // The publishing plugin uploads releases through retrofit, which asks for OkHttp 3.14.9.
             // That version can accept the wrong TLS certificate (CVE-2021-0341); OkHttp 4 is binary
             // compatible with 3.x and fixed.
-            classpath('com.squareup.okhttp3:okhttp:4.12.0') {
+            classpath('com.squareup.okhttp3:okhttp:5.5.1') {
                 because 'OkHttp 3.14.9 has CVE-2021-0341 (GHSA-3cqm-mf7h-prrj)'
             }
         }
