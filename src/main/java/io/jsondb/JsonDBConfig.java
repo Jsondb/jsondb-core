@@ -23,6 +23,8 @@ package io.jsondb;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -51,9 +53,17 @@ public class JsonDBConfig {
   //References
   private ObjectMapper objectMapper;
   private Comparator<String> schemaComparator;
+  private ClassLoader[] classLoaders;
+  private Collection<Class<?>> entityClasses;
 
   public JsonDBConfig(String dbFilesLocationString, String baseScanPackage,
       ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator, null);
+  }
+
+  public JsonDBConfig(String dbFilesLocationString, String baseScanPackage,
+      ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator,
+      Collection<Class<?>> entityClasses, ClassLoader... classLoaders) {
 
     this.charset = Charset.forName("UTF-8");
     this.dbFilesLocationString = dbFilesLocationString;
@@ -77,6 +87,8 @@ public class JsonDBConfig {
     } else {
       this.schemaComparator = schemaComparator;
     }
+    this.entityClasses = entityClasses;
+    this.classLoaders = classLoaders;
   }
 
   public Charset getCharset() {
@@ -131,5 +143,21 @@ public class JsonDBConfig {
   }
   public Comparator<String> getSchemaComparator() {
     return schemaComparator;
+  }
+
+  public ClassLoader[] getClassLoaders() {
+    return classLoaders;
+  }
+
+  public void setClassLoaders(ClassLoader... classLoaders) {
+    this.classLoaders = classLoaders;
+  }
+
+  public Collection<Class<?>> getEntityClasses() {
+    return entityClasses == null ? Collections.emptyList() : entityClasses;
+  }
+
+  public void setEntityClasses(Collection<Class<?>> entityClasses) {
+    this.entityClasses = entityClasses;
   }
 }

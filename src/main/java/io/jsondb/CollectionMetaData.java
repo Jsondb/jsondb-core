@@ -24,8 +24,10 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +35,13 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.reflections.Reflections;
+import org.reflections.serializers.JsonSerializer;
+import org.reflections.serializers.XmlSerializer;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.jsondb.annotation.Document;
 import io.jsondb.annotation.Id;
@@ -42,6 +51,8 @@ import io.jsondb.annotation.Secret;
  * @version 1.0 25-Sep-2016
  */
 public class CollectionMetaData {
+  private static final Logger logger = LoggerFactory.getLogger(CollectionMetaData.class);
+
   private String collectionName;
   private String schemaVersion;
   private String actualSchemaVersion;
@@ -213,15 +224,104 @@ public class CollectionMetaData {
    */
   public static Map<String, CollectionMetaData> builder(JsonDBConfig dbConfig) {
     Map<String, CollectionMetaData> collectionMetaData = new LinkedHashMap<String, CollectionMetaData>();
-    Reflections reflections = new Reflections(dbConfig.getBaseScanPackage());
-    Set<Class<?>> docClasses = reflections.getTypesAnnotatedWith(Document.class);
+    Set<Class<?>> docClasses = findDocumentClasses(dbConfig);
     for (Class<?> c : docClasses) {
       Document d = c.getAnnotation(Document.class);
+      if (d == null) {
+        continue;
+      }
       String collectionName = d.collection();
       String version = d.schemaVersion();
       CollectionMetaData cmd = new CollectionMetaData(collectionName, c, version, dbConfig.getSchemaComparator());
       collectionMetaData.put(collectionName, cmd);
     }
     return collectionMetaData;
+  }
+
+  private static Set<Class<?>> findDocumentClasses(JsonDBConfig dbConfig) {
+    Set<Class<?>> docClasses = new LinkedHashSet<Class<?>>();
+    String baseScanPackage = dbConfig.getBaseScanPackage();
+    ClassLoader[] loaders = resolveClassLoaders(dbConfig);
+
+    if (baseScanPackage != null && !baseScanPackage.trim().isEmpty()) {
+      try {
+        Reflections reflections = new Reflections(new ConfigurationBuilder()
+            .forPackage(baseScanPackage, loaders)
+            .addClassLoaders(loaders)
+            .filterInputsBy(new FilterBuilder().includePackage(baseScanPackage)));
+        Set<Class<?>> scanned = reflections.getTypesAnnotatedWith(Document.class);
+        if (scanned != null) {
+          docClasses.addAll(scanned);
+        }
+      } catch (RuntimeException e) {
+        logger.debug("Runtime package scan failed for package '{}'; falling back to pre-built Reflections index", baseScanPackage, e);
+      }
+    }
+
+    if (docClasses.isEmpty()) {
+      collectFromMetadataIndex(baseScanPackage, loaders, docClasses);
+    }
+
+    Collection<Class<?>> explicitClasses = dbConfig.getEntityClasses();
+    if (explicitClasses != null) {
+      for (Class<?> clazz : explicitClasses) {
+        if (clazz != null && clazz.isAnnotationPresent(Document.class)) {
+          docClasses.add(clazz);
+        }
+      }
+    }
+    return docClasses;
+  }
+
+  private static ClassLoader[] resolveClassLoaders(JsonDBConfig dbConfig) {
+    ClassLoader[] configured = dbConfig.getClassLoaders();
+    if (configured != null && configured.length > 0) {
+      return configured;
+    }
+    return ClasspathHelper.classLoaders(CollectionMetaData.class.getClassLoader());
+  }
+
+  private static void collectFromMetadataIndex(String baseScanPackage, ClassLoader[] loaders, Set<Class<?>> target) {
+    try {
+      Reflections xmlReflections = Reflections.collect(
+          "META-INF/reflections/",
+          new FilterBuilder().includePattern(".*\\.xml"),
+          new XmlSerializer(),
+          loaders);
+      addMatchingDocuments(xmlReflections.getTypesAnnotatedWith(Document.class), baseScanPackage, target);
+    } catch (LinkageError | RuntimeException e) {
+      logger.debug("Unable to collect XML Reflections metadata index", e);
+    }
+
+    try {
+      Reflections jsonReflections = Reflections.collect(
+          "META-INF/reflections/",
+          new FilterBuilder().includePattern(".*\\.json"),
+          new JsonSerializer(),
+          loaders);
+      addMatchingDocuments(jsonReflections.getTypesAnnotatedWith(Document.class), baseScanPackage, target);
+    } catch (LinkageError | RuntimeException e) {
+      logger.debug("Unable to collect JSON Reflections metadata index", e);
+    }
+  }
+
+  private static void addMatchingDocuments(Set<Class<?>> candidates, String baseScanPackage, Set<Class<?>> target) {
+    if (candidates == null) {
+      return;
+    }
+    for (Class<?> candidate : candidates) {
+      if (candidate != null && matchesBaseScanPackage(candidate, baseScanPackage)) {
+        target.add(candidate);
+      }
+    }
+  }
+
+  private static boolean matchesBaseScanPackage(Class<?> clazz, String baseScanPackage) {
+    if (baseScanPackage == null || baseScanPackage.trim().isEmpty()) {
+      return true;
+    }
+    String trimmed = baseScanPackage.trim();
+    String className = clazz.getName();
+    return className.equals(trimmed) || className.startsWith(trimmed + ".");
   }
 }

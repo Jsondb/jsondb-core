@@ -93,8 +93,22 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
 
   public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
-    dbConfig = new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator);
-    if (null == cipher) {
+    this(new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator));
+  }
+
+  public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage, Collection<Class<?>> entityClasses) {
+    this(new JsonDBConfig(dbFilesLocationString, baseScanPackage, null, false, null, entityClasses));
+  }
+
+  public JsonDBTemplate(String dbFilesLocationString, String baseScanPackage, ICipher cipher,
+      boolean compatibilityMode, Comparator<String> schemaComparator,
+      Collection<Class<?>> entityClasses, ClassLoader... classLoaders) {
+    this(new JsonDBConfig(dbFilesLocationString, baseScanPackage, cipher, compatibilityMode, schemaComparator, entityClasses, classLoaders));
+  }
+
+  public JsonDBTemplate(JsonDBConfig dbConfig) {
+    this.dbConfig = dbConfig;
+    if (null == dbConfig.getCipher()) {
       logger.info("Encryption is not enabled for JSON DB");
       this.encrypted = false;
     } else {
@@ -1435,7 +1449,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             newValue = dbConfig.getCipher().encrypt(newValue.toString());
           }
           try {
-            BeanUtils.copyProperty(clonedModifiedObject, entry.getKey(), newValue);
+            copyProperty(clonedModifiedObject, entry.getKey(), newValue, cmd);
           } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error("Failed to copy updated data into existing collection document using BeanUtils", e);
             return null;
@@ -1506,7 +1520,7 @@ public class JsonDBTemplate implements JsonDBOperations {
             newValue = dbConfig.getCipher().encrypt(newValue.toString());
           }
           try {
-            BeanUtils.copyProperty(clonedModifiedObject, entry.getKey(), newValue);
+            copyProperty(clonedModifiedObject, entry.getKey(), newValue, cmd);
           } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error("Failed to copy updated data into existing collection document using BeanUtils", e);
             return null;
@@ -1752,6 +1766,22 @@ public class JsonDBTemplate implements JsonDBOperations {
     Collections.sort(collectionNames);
     for (int i = collectionNames.size() - 1; i >= 0; i--) {
       cmdMap.get(collectionNames.get(i)).getCollectionLock().writeLock().unlock();
+    }
+  }
+
+  private static void copyProperty(Object target, String propertyName, Object value, CollectionMetaData cmd)
+      throws IllegalAccessException, InvocationTargetException {
+    try {
+      BeanUtils.copyProperty(target, propertyName, value);
+    } catch (LinkageError androidFallback) {
+      Method setter = cmd != null ? cmd.getSetterMethodForFieldName(propertyName) : null;
+      if (setter != null) {
+        setter.invoke(target, value);
+      } else {
+        throw new InvalidJsonDbApiUsageException(
+            "Unable to set property '" + propertyName + "' on " + target.getClass().getName()
+                + " without java.beans support.", androidFallback);
+      }
     }
   }
 }
