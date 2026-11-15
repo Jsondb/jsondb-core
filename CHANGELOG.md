@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+### New features
+
+- `JsonDBTemplate.setSyncFolderOnWrite(true)` forces the database folder to disk after every write, so a write that returned is never lost in a crash or power loss. It makes writes several times slower, so it is off by default.
+
 ### Bug fixes
 
+- A crash or power loss shortly after a write could leave a collection file empty or partly written, because the new file was renamed into place before its data reached the disk. Every write now flushes the file to disk first; on this Mac's SSD that cost no measurable time.
 - Every write rejected because a collection is loaded read-only leaked two file handles, and a failed write of the temporary collection file left the `.tmp` file in the database folder.
 - **Documents inserted without an id could be lost.** JsonDB generated an id for them but stored them under `null` instead of that id, so a second document without an id replaced the first in memory, and the next write dropped it from the file. `findById()` couldn't find them by their generated id either, and a batch `insert()`/`upsert()` of several such documents failed with "Duplicate object with id: null". Documents are now stored under their generated id.
 - Nine operations (`insert`, `save`, `upsert` and `remove`, single and batch, plus `reloadCollection` and `isCollectionReadonly`) failed with a bare `NullPointerException` when given a collection name that no `@Document` class has, e.g. a typo. They now fail with an `InvalidJsonDbApiUsageException` naming the collection, like the other operations.

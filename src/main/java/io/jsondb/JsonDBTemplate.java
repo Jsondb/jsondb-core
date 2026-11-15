@@ -148,6 +148,28 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     this(new JsonDBConfig(dbFilesLocationString, entityClasses, cipher, compatibilityMode, schemaComparator));
   }
 
+  /**
+   * Every write is flushed to disk before it replaces the collection file, so a crash or power loss
+   * never leaves a corrupted or empty collection file. The rename itself can still be lost, and with it
+   * the last write, until the operating system writes the folder out, typically within seconds.
+   *
+   * Turning this on also forces the folder to disk after every write, so a write that returned is never
+   * lost. It makes each write several times slower, so it is off by default.
+   *
+   * @param syncFolderOnWrite true to force the database folder to disk after every write
+   */
+  public void setSyncFolderOnWrite(boolean syncFolderOnWrite) {
+    dbConfig.setSyncFolderOnWrite(syncFolderOnWrite);
+  }
+
+  /**
+   * @return true if the database folder is forced to disk after every write
+   * @see #setSyncFolderOnWrite(boolean)
+   */
+  public boolean isSyncFolderOnWrite() {
+    return dbConfig.isSyncFolderOnWrite();
+  }
+
   private JsonDBTemplate(JsonDBConfig dbConfig) {
     this.dbConfig = dbConfig;
     ICipher cipher = dbConfig.getCipher();

@@ -31,6 +31,7 @@ import java.nio.channels.FileLock;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -69,6 +70,7 @@ public class JsonWriter {
   private ObjectMapper objectMapper;
   private SchemaVersion schemaVersion;
   private CollectionMetaData cmd;
+  private boolean syncFolderOnWrite;
 
   private File lockFilesLocation;
   private File fileLockLocation;
@@ -85,6 +87,7 @@ public class JsonWriter {
     this.objectMapper = dbConfig.getObjectMapper();
     this.schemaVersion = new SchemaVersion(cmd.getSchemaVersion());
     this.cmd = cmd;
+    this.syncFolderOnWrite = dbConfig.isSyncFolderOnWrite();
     
     this.lockFilesLocation = new File(collectionFile.getParentFile(), "lock");
     this.fileLockLocation = new File(lockFilesLocation, collectionFile.getName() + ".lock");
@@ -145,6 +148,9 @@ public class JsonWriter {
   private void moveIntoPlace(File tFile) {
     try {
       Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
+      if (syncFolderOnWrite) {
+        syncDirectory(collectionFile.getParentFile());
+      }
     } catch (IOException e) {
       logger.error("Failed to move temporary collection file {} to collection file {}", tFile.getName(), collectionFile.getName(), e);
       try {
@@ -190,7 +196,8 @@ public class JsonWriter {
         return false;
       }
 
-      try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tFile), charset))) {
+      try (FileOutputStream fos = new FileOutputStream(tFile);
+           BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fos, charset))) {
         writer.write(objectMapper.writeValueAsString(schemaVersion));
         writer.newLine();
         for (Object document : documents) {
@@ -198,6 +205,10 @@ public class JsonWriter {
           writer.write(null == lineTransform ? documentData : lineTransform.apply(documentData));
           writer.newLine();
         }
+        writer.flush();
+        // Force the data to disk before the rename makes it the collection file, so that a crash or
+        // power loss cannot leave an empty or partly written collection file behind
+        fos.getFD().sync();
       } catch (JsonProcessingException e) {
         logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
         deleteQuietly(tFile);
@@ -212,6 +223,19 @@ public class JsonWriter {
       return true;
     } finally {
       releaseLock(lock);
+    }
+  }
+
+  /**
+   * Forces the folder's entries, and so the rename that replaced the collection file, to disk; see
+   * JsonDBConfig#setSyncFolderOnWrite. Opening a folder this way is not supported everywhere (e.g.
+   * Windows); the rename is still atomic there, just not yet forced to disk.
+   */
+  private void syncDirectory(File directory) {
+    try (FileChannel folder = FileChannel.open(directory.toPath(), StandardOpenOption.READ)) {
+      folder.force(true);
+    } catch (IOException | UnsupportedOperationException e) {
+      logger.debug("Could not force folder {} to disk after replacing collection file {}", directory, collectionFile.getName(), e);
     }
   }
 
