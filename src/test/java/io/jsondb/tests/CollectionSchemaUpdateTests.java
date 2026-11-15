@@ -208,6 +208,18 @@ public class CollectionSchemaUpdateTests {
   }
 
   @Test
+  public void test_NullAndEmptyUpdatesChangeNothing() throws Exception {
+    writeOldSchemaFile("user", "hostname");
+    byte[] before = java.nio.file.Files.readAllBytes(loadbalancerJson.toPath());
+
+    jsonDBTemplate.updateCollectionSchema(null, LoadBalancer.class);
+    jsonDBTemplate.updateCollectionSchema(new CollectionSchemaUpdate(), LoadBalancer.class);
+
+    assertArrayEquals(before, java.nio.file.Files.readAllBytes(loadbalancerJson.toPath()));
+    assertTrue("a no-op update must not migrate the collection", jsonDBTemplate.isCollectionReadonly(LoadBalancer.class));
+  }
+
+  @Test
   public void test_SwappedRenames() throws Exception {
     writeOldSchemaDocs("{\"id\":\"001\",\"hostname\":\"u1\",\"username\":\"h1\"}");
     jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("hostname", new RenameOperation("username"))

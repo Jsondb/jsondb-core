@@ -129,6 +129,26 @@ public class UtilTests {
     Util.getSliceIndexes("1:2:0", 2);
   }
 
+  /**
+   * A zero step with the start and end omitted goes through the default start/end logic, not the
+   * explicit i:j:k parsing that test_IllegalSliceText_4 covers
+   */
+  @Test
+  public void test_IllegalSliceText_ZeroStepWithDefaults() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("k != 0");
+
+    Util.getSliceIndexes("::0", 5);
+  }
+
+  @Test
+  public void test_IllegalSliceText_ZeroStepWithDefaultEnd() {
+    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expectMessage("k != 0");
+
+    Util.getSliceIndexes("1::0", 5);
+  }
+
   @Test
   public void test_getSliceIndexes_Nulls() {
     List<Integer> indexes = null;
