@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Farooq Khan
+ * Copyright (c) 2018 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to 
