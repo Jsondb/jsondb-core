@@ -259,4 +259,91 @@ public class BackupRestoreTests {
 
     assertEquals("original-secret", template.findById("07", Instance.class).getPrivateKey());
   }
+
+  /**
+   * Writes a zip with the given entry names and contents. A null content makes a directory entry.
+   */
+  private void writeZip(File zip, String[][] entries) throws Exception {
+    zip.getParentFile().mkdirs();
+    try (java.util.zip.ZipOutputStream out = new java.util.zip.ZipOutputStream(new java.io.FileOutputStream(zip))) {
+      for (String[] entry : entries) {
+        out.putNextEntry(new ZipEntry(entry[0]));
+        if (null != entry[1]) {
+          out.write(entry[1].getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
+        out.closeEntry();
+      }
+    }
+  }
+
+  @Test
+  public void testRestoreFromADirectoryUsesTheDefaultBackupFile() throws Exception {
+    JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model");
+    template.backup(BACKUP_DIR);
+    template.remove(template.findById("01", Instance.class), Instance.class);
+    assertEquals(5, template.findAll(Instance.class).size());
+
+    template.restore(BACKUP_DIR, false);
+    assertEquals(6, template.findAll(Instance.class).size());
+  }
+
+  @Test
+  public void testRestorePathWithoutZipExtensionAddsIt() throws Exception {
+    JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model");
+    String path = new File(backupFolder, "nightly").getPath();
+    template.backup(path);
+    assertTrue(new File(backupFolder, "nightly.zip").isFile());
+    template.remove(template.findById("01", Instance.class), Instance.class);
+
+    template.restore(path, false);
+    assertEquals(6, template.findAll(Instance.class).size());
+  }
+
+  /**
+   * A crafted backup must not be able to write outside the database folder (zip slip), create
+   * subfolders, or drop files that are not collection files, in either restore mode
+   */
+  @Test
+  public void testRestoreIgnoresUnsafeZipEntries() throws Exception {
+    String instances = new String(java.nio.file.Files.readAllBytes(instancesJson.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+    File escaped = new File(dbFolder.getParentFile(), "escaped.json");
+    writeZip(backupZip, new String[][] {
+        {"instances.json", instances},
+        {"../escaped.json", instances},
+        {"nested/inner.json", instances},
+        {"folder/", null},
+        {"readme.txt", "not a collection"}});
+    try {
+      for (boolean merge : new boolean[] {false, true}) {
+        JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model");
+        template.restore(backupZip.getAbsolutePath(), merge);
+        assertEquals(6, template.findAll(Instance.class).size());
+        assertFalse("entry escaped the database folder (merge=" + merge + ")", escaped.exists());
+        assertFalse("nested entry created a folder (merge=" + merge + ")", new File(dbFolder, "nested").exists());
+        assertFalse("directory entry created a folder (merge=" + merge + ")", new File(dbFolder, "folder").exists());
+        assertFalse("non-collection file restored (merge=" + merge + ")", new File(dbFolder, "readme.txt").exists());
+        template.close();
+      }
+    } finally {
+      escaped.delete();
+    }
+  }
+
+  /**
+   * Merge mode copies a collection file that no class of this database knows as it is, so the data is
+   * kept for a class added later
+   */
+  @Test
+  public void testRestoreMergeKeepsCollectionsThisDatabaseDoesNotKnow() throws Exception {
+    String strangers = "{\"schemaVersion\":\"1.0\"}\n{\"id\":\"s1\",\"name\":\"kept\"}\n";
+    writeZip(backupZip, new String[][] {{"strangers.json", strangers}});
+
+    JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model");
+    template.restore(backupZip.getAbsolutePath(), true);
+
+    File restored = new File(dbFolder, "strangers.json");
+    assertTrue(restored.isFile());
+    assertEquals(strangers, new String(java.nio.file.Files.readAllBytes(restored.toPath()), java.nio.charset.StandardCharsets.UTF_8));
+    assertEquals(6, template.findAll(Instance.class).size());
+  }
 }
