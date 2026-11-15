@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Farooq Khan
+ * Copyright (c) 2018 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to 
@@ -21,6 +21,7 @@
 package io.jsondb.tests;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,8 +33,10 @@ import org.junit.Test;
 
 import com.google.common.io.Files;
 
+import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
+import io.jsondb.tests.model.Instance;
 import io.jsondb.tests.util.TestUtils;
 
 /**
@@ -70,6 +73,44 @@ public class LoadInvalidJsonTests {
     Set<String> collectionNames = jsonDBTemplate.getCollectionNames();
     
     assertEquals(collectionNames.size(), 0);
+    assertEquals(8, TestUtils.getNoOfLinesInFile(instancesJson));
+  }
+
+  /**
+   * A collection that failed to load is absent from memory, but its file must not be
+   * mistaken for a missing collection and overwritten by getCollection()
+   */
+  @Test
+  public void testGetCollectionDoesNotOverwriteUnloadableCollectionFile() {
+    String invalidJson = "{\"id\"=\"07\",\"hostname\":\"ec2-54-191-07\",\"privateKey\":\"\",\"publicKey\":\"\"}";
+    TestUtils.appendDirectToFile(instancesJson, invalidJson);
+    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+
+    try {
+      jsonDBTemplate.getCollection(Instance.class);
+      fail("Expected getCollection to refuse a collection whose file could not be loaded");
+    } catch (InvalidJsonDbApiUsageException expected) {
+      // Refusing is the correct outcome
+    }
+    assertEquals(8, TestUtils.getNoOfLinesInFile(instancesJson));
+  }
+
+  /**
+   * createCollection() must refuse rather than overwrite a collection file that exists on disk
+   * but could not be loaded
+   */
+  @Test
+  public void testCreateCollectionDoesNotOverwriteUnloadableCollectionFile() {
+    String invalidJson = "{\"id\"=\"07\",\"hostname\":\"ec2-54-191-07\",\"privateKey\":\"\",\"publicKey\":\"\"}";
+    TestUtils.appendDirectToFile(instancesJson, invalidJson);
+    JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+
+    try {
+      jsonDBTemplate.createCollection(Instance.class);
+      fail("Expected createCollection to refuse an existing collection file");
+    } catch (InvalidJsonDbApiUsageException expected) {
+      // Refusing is the correct outcome
+    }
     assertEquals(8, TestUtils.getNoOfLinesInFile(instancesJson));
   }
 }

@@ -317,11 +317,19 @@ public class JsonDBTemplate implements JsonDBOperations {
     try {
       String collectionFileName = collectionName + ".json";
       File fileObject = new File(dbConfig.getDbFilesLocation(), collectionFileName);
+      boolean fileCreated;
       try {
-        fileObject.createNewFile();
+        fileCreated = fileObject.createNewFile();
       } catch (IOException e) {
         logger.error("IO Exception creating the collection file {}", collectionFileName, e);
         throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName);
+      }
+      if (!fileCreated) {
+        // The file exists but the collection is not loaded, typically because the file failed to parse.
+        // Stamping a version on it would truncate it and destroy the user's data.
+        throw new InvalidJsonDbApiUsageException("Collection file " + fileObject.getAbsolutePath()
+            + " already exists but is not loaded, it may be corrupt. Repair or remove it, then call reloadCollection(\""
+            + collectionName + "\")");
       }
 
       if (Util.stampVersion(dbConfig, fileObject, cmd.getSchemaVersion())) {
