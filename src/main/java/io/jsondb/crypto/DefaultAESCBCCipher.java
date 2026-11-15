@@ -35,9 +35,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.jsondb.JsonDBException;
 
 /**
@@ -47,7 +44,6 @@ import io.jsondb.JsonDBException;
  */
 @Deprecated
 public class DefaultAESCBCCipher implements ICipher {
-  private Logger logger = LoggerFactory.getLogger(DefaultAESCBCCipher.class);
 
   private static final String AES_ENCRYPTION_ALGORITHM = "AES";
   
@@ -141,11 +137,9 @@ public class DefaultAESCBCCipher implements ICipher {
       encryptCipher.init(Cipher.ENCRYPT_MODE, key,new IvParameterSpec(encryptionKey));
       decryptCipher.init(Cipher.DECRYPT_MODE, key,new IvParameterSpec(encryptionKey));
     } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
-      logger.error("Failed to create DefaultAESCBCCipher", e);
       throw e;
     } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
-      logger.error("Failed to create DefaultAESCBCCipher", e);
-      throw new InvalidKeyException("Failed to create DefaultAESCBCCipher, something wrong with the key");
+      throw new InvalidKeyException("Failed to create DefaultAESCBCCipher, something wrong with the key", e);
     }
   }
 
@@ -162,7 +156,6 @@ public class DefaultAESCBCCipher implements ICipher {
       try {
         cipherBytes = encryptCipher.doFinal(plainText.getBytes(charset));
       } catch (UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException e) {
-        logger.error("DefaultAESCBCCipher failed to encrypt text", e);
         throw new JsonDBException("DefaultAESCBCCipher failed to encrypt text", e);
       }
       return Base64.getEncoder().encodeToString(cipherBytes);
@@ -187,7 +180,6 @@ public class DefaultAESCBCCipher implements ICipher {
         byte[] bytes = Base64.getDecoder().decode(cipherText);
         decryptedValue = new String(decryptCipher.doFinal(bytes), charset);
       } catch (UnsupportedEncodingException | IllegalBlockSizeException | BadPaddingException e) {
-        logger.error("DefaultAESCBCCipher failed to decrypt text", e);
         throw new JsonDBException("DefaultAESCBCCipher failed to decrypt text", e);
       }
       return decryptedValue;

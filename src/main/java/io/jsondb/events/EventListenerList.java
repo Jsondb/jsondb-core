@@ -80,7 +80,6 @@ public class EventListenerList {
                                                     StandardWatchEventKinds.ENTRY_DELETE,
                                                     StandardWatchEventKinds.ENTRY_MODIFY);
       } catch (IOException e) {
-        logger.error("Failed to create the WatchService for the dbFiles location", e);
         throw new JsonDBException("Failed to create the WatchService for the dbFiles location", e);
       }
 
