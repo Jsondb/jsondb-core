@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -72,6 +72,9 @@ public class CollectionMetaData {
 
     //Populate the class metadata
     setupClassMetadata(clazz);
+
+    //Without java.beans (Android) JXPath cannot introspect the class, so queries need this handler
+    ReflectionPropertyHandler.registerIfJavaBeansMissing(clazz);
 
     this.idAnnotatedFieldGetterMethod = getterMethodMap.get(idAnnotatedFieldName);
     this.idAnnotatedFieldSetterMethod = setterMethodMap.get(idAnnotatedFieldName);
