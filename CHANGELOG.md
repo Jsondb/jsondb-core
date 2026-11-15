@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- A `@Document` class without JsonDB's `@Id` annotation, for example one using `javax.persistence.Id`, failed with a bare `NullPointerException`. It now fails with an `InvalidJsonDbApiUsageException` naming the class and the annotation it needs. (#23)
+
 ### New
 
 - `count(Class)` and `count(String collectionName)` return the number of documents in a collection without copying them, as `findAll()` does. (#54)
