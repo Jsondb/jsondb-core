@@ -1841,12 +1841,20 @@ public class JsonDBTemplate implements JsonDBOperations {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void mergeCollectionFromBackup(String collectionName, CollectionMetaData cmd, File backupCollectionFile) {
     List<Object> documents = readEntityDocumentsFromFile(backupCollectionFile, cmd);
-    for (Object document : documents) {
-      upsert(document, collectionName);
+    if (encrypted && cmd.hasSecret()) {
+      // Backup files hold @Secret fields already encrypted and upsert encrypts them again, so decrypt first
+      for (Object document : documents) {
+        try {
+          CryptoUtil.decryptFields(document, cmd, dbConfig.getCipher());
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+          throw new JsonDBException("Failed to decrypt a @Secret field in the backup of collection " + collectionName, e);
+        }
+      }
     }
+    // One batch upsert rewrites the collection file once instead of once per document
+    upsert(documents, collectionName);
   }
 
   @SuppressWarnings("unchecked")
