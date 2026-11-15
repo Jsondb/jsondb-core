@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Bug fixes
+
+- Nine operations (`insert`, `save`, `upsert` and `remove`, single and batch, plus `reloadCollection` and `isCollectionReadonly`) failed with a bare `NullPointerException` when given a collection name that no `@Document` class has, e.g. a typo. They now fail with an `InvalidJsonDbApiUsageException` naming the collection, like the other operations.
+- Removing a file-change listener when none was registered threw `NullPointerException`.
+- After the last file-change listener was removed, adding a listener again never restarted the file watcher, so the new listener received no events.
+- The file watcher thread read the listener list without synchronisation, so adding or removing a listener while an event was being delivered could fail.
+
 ## 1.1.16
 
 ### Bug fixes
