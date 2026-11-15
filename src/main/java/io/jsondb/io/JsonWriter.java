@@ -210,7 +210,6 @@ public class JsonWriter {
         // power loss cannot leave an empty or partly written collection file behind
         fos.getFD().sync();
       } catch (JsonProcessingException e) {
-        logger.error("Failed in coverting Object to Json collection {}", collectionName, e);
         deleteQuietly(tFile);
         throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
       } catch (IOException e) {

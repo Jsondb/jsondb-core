@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 - 2017 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to 
@@ -32,9 +32,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.jsondb.CollectionMetaData;
 
 /**
@@ -42,7 +39,6 @@ import io.jsondb.CollectionMetaData;
  * @version 1.0 25-Sep-2016
  */
 public class CryptoUtil {
-  private static Logger logger = LoggerFactory.getLogger(CryptoUtil.class);
 
   /**
    * A utility method to encrypt the value of field marked by the @Secret annotation using its
@@ -70,7 +66,6 @@ public class CryptoUtil {
           setterMethod.invoke(object, encryptedValue);
         }
       } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-        logger.error("Error when invoking method for a @Secret annotated field", e);
         throw e;
       }
     }
@@ -103,7 +98,6 @@ public class CryptoUtil {
           setterMethod.invoke(object, decryptedValue);
         }
       } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-        logger.error("Error when invoking method for a @Secret annotated field", e);
         throw e;
       }
     }

@@ -289,8 +289,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       try {
         Files.createDirectory(dbConfig.getDbFilesPath());
       } catch (IOException e) {
-        logger.error("DbFiles directory does not exist. Failed to create a new empty DBFiles directory {}", e);
-        throw new InvalidJsonDbApiUsageException("DbFiles directory does not exist. Failed to create a new empty DBFiles directory " + dbConfig.getDbFilesLocationString());
+        throw new InvalidJsonDbApiUsageException("DbFiles directory does not exist. Failed to create a new empty DBFiles directory " + dbConfig.getDbFilesLocationString(), e);
       }
     } else if (dbConfig.getDbFilesLocation().isFile()) {
       throw new InvalidJsonDbApiUsageException("Specified DbFiles directory is actually a file cannot use it as a directory");
@@ -487,8 +486,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       try {
         fileCreated = fileObject.createNewFile();
       } catch (IOException e) {
-        logger.error("IO Exception creating the collection file {}", collectionFileName, e);
-        throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName);
+        throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName, e);
       }
       if (!fileCreated) {
         // The file exists but the collection is not loaded, typically because the file failed to parse.
@@ -536,8 +534,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       try {
         Files.deleteIfExists(toDelete.toPath());
       } catch (IOException e) {
-        logger.error("IO Exception deleting the collection file {}", toDelete.getName(), e);
-        throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName);
+        throw new InvalidJsonDbApiUsageException("Unable to delete the collection file for collection: " + collectionName, e);
       }
       //cmdMap.remove(collectionName); //Do not remove it from the CollectionMetaData Map.
       //Someone might want to re insert a new collection of this type.
@@ -683,7 +680,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       // Reload while still holding the lock so no other operation sees, or writes back, the old objects
       reloadCollection(collectionName);
     } catch (IOException e) {
-      logger.error("Failed to update the schema of collection " + collectionName, e);
       throw new JsonDBException("Failed to update the schema of collection " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
@@ -730,7 +726,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         newCollection.add((T) obj);
       }
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     }
     return newCollection;
@@ -868,7 +863,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       return newCollection;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().readLock().unlock();
@@ -964,7 +958,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       return newCollection;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().readLock().unlock();
@@ -1024,7 +1017,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       return (T) obj;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().readLock().unlock();
@@ -1063,7 +1055,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       return null;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().readLock().unlock();
@@ -1115,7 +1106,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       requireSaved(jw.appendToJsonFile(collection.values(), objToSave), collectionName);
       collection.put(Util.deepCopy(id), (T) objToSave);
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
@@ -1170,7 +1160,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       requireSaved(jw.appendToJsonFile(collection.values(), newCollection.values()), collectionName);
       collection.putAll(newCollection);
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
@@ -1222,7 +1211,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       requireSaved(jw.updateInJsonFile(collection, id, newObject), collectionName);
       collection.put(id, newObject);
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
@@ -1384,7 +1372,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         collection.put(id, (T) objToSave);
       }
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
@@ -1459,7 +1446,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       collection.putAll(collectionToUpdate);
       collection.putAll(collectionToInsert);
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       collectionMeta.getCollectionLock().writeLock().unlock();
@@ -1612,7 +1598,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       return null;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
@@ -1724,7 +1709,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       return returnObjects;
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when decrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       cmd.getCollectionLock().writeLock().unlock();
@@ -1772,7 +1756,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       dbConfig.setCipher(newCipher);
     } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      logger.error("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
       throw new JsonDBException("Error when encrypting value for a @Secret annotated field for entity: " + collectionName, e);
     } finally {
       for (Entry<String, Map<Object, ?>> entry : collectionsRef.get().entrySet()) {
@@ -1801,7 +1784,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       JsonDbArchive.createBackupZip(dbDirectory, zipFile);
       logger.debug("Created JsonDB backup at {}", zipFile.getAbsolutePath());
     } catch (IOException e) {
-      logger.error("Failed to create JsonDB backup at {}", zipFile.getAbsolutePath(), e);
       throw new JsonDBException("Failed to create JsonDB backup at " + zipFile.getAbsolutePath(), e);
     } finally {
       unlockAllCollectionsWrite();
@@ -1837,7 +1819,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       reLoadDB();
       logger.debug("Restored JsonDB from backup {} (replace mode)", zipFile.getAbsolutePath());
     } catch (IOException e) {
-      logger.error("Failed to restore JsonDB from backup {}", zipFile.getAbsolutePath(), e);
       throw new JsonDBException("Failed to restore JsonDB from backup " + zipFile.getAbsolutePath(), e);
     } finally {
       unlockAllCollectionsWrite();
@@ -1872,7 +1853,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       logger.debug("Restored JsonDB from backup {} (merge mode)", zipFile.getAbsolutePath());
     } catch (IOException e) {
-      logger.error("Failed to merge JsonDB from backup {}", zipFile.getAbsolutePath(), e);
       throw new JsonDBException("Failed to merge JsonDB from backup " + zipFile.getAbsolutePath(), e);
     } finally {
       if (null != tempDirectory) {
@@ -1912,7 +1892,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         }
       }
     } catch (IOException e) {
-      logger.error("Failed to read documents from backup file {}", collectionFile.getName(), e);
       throw new JsonDBException("Failed to read documents from backup file " + collectionFile.getName(), e);
     } finally {
       if (null != jr) {
