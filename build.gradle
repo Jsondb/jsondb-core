@@ -34,7 +34,7 @@ buildscript {
 plugins {
     id 'java'
     id 'jacoco'
-    id 'com.vanniktech.maven.publish' version '0.35.0'
+    id 'com.vanniktech.maven.publish' version '0.37.0'
     id 'signing'
     id 'eclipse'
     id 'idea'
