@@ -38,7 +38,6 @@ ext {
     slf4jVersion = '1.7.36'
     jacksonVersion = '2.18.8'
     guavaVersion = '33.6.0-jre'
-    beanutilsVersion = '1.11.0'
     jxpathVersion = '1.4.0'
     reflectionsVersion = '0.10.2'
     junitVersion = '4.13.2'
@@ -78,8 +77,7 @@ dependencies {
 
     implementation "org.reflections:reflections:${reflectionsVersion}",
             "commons-jxpath:commons-jxpath:${jxpathVersion}",
-            "com.google.guava:guava:${guavaVersion}",
-            "commons-beanutils:commons-beanutils:${beanutilsVersion}"
+            "com.google.guava:guava:${guavaVersion}"
 
     testImplementation "junit:junit:${junitVersion}",
             "org.hamcrest:hamcrest-library:${hamcrestVersion}"

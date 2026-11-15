@@ -42,14 +42,17 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.jxpath.FunctionLibrary;
 import org.apache.commons.jxpath.JXPathContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.jsondb.crypto.CryptoUtil;
 import io.jsondb.crypto.ICipher;
@@ -1490,20 +1493,8 @@ public class JsonDBTemplate implements JsonDBOperations {
         break; // Use only the first element we find.
       }
       if (null != objectToModify) {
-        //Clone it because we dont want to touch the in-memory object until we have really saved it
-        clonedModifiedObject = (T) Util.deepCopy(objectToModify);
-        for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
-          Object newValue = Util.deepCopy(entry.getValue());
-          if(encrypted && cmd.hasSecret() && cmd.isSecretField(entry.getKey())){
-            newValue = dbConfig.getCipher().encrypt(newValue.toString());
-          }
-          try {
-            BeanUtils.copyProperty(clonedModifiedObject, entry.getKey(), newValue);
-          } catch (IllegalAccessException | InvocationTargetException e) {
-            logger.error("Failed to copy updated data into existing collection document using BeanUtils", e);
-            return null;
-          }
-        }
+        //Work on a modified copy because we dont want to touch the in-memory object until we have really saved it
+        clonedModifiedObject = applyUpdate(objectToModify, update, cmd, collectionName);
 
         Object idToModify = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
         JsonWriter jw = null;
@@ -1534,6 +1525,55 @@ public class JsonDBTemplate implements JsonDBOperations {
   }
 
 
+  /**
+   * Returns a copy of the document with the update applied, leaving the document itself untouched.
+   *
+   * Values are converted with the same Jackson rules used to read the collection files, so an update
+   * accepts what the file format accepts. A key can name a nested property with dots, such as
+   * "address.city". An update that names an unknown property, sets null into a primitive or would
+   * lose data (such as 7.9 into a long) is rejected.
+   */
+  @SuppressWarnings("unchecked")
+  private <T> T applyUpdate(T document, Update update, CollectionMetaData cmd, String collectionName) {
+    ObjectMapper objectMapper = dbConfig.getObjectMapper();
+    ObjectNode root = objectMapper.valueToTree(document);
+    for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
+      String key = entry.getKey();
+      Object newValue = entry.getValue();
+      if (encrypted && cmd.hasSecret() && cmd.isSecretField(key) && null != newValue) {
+        newValue = dbConfig.getCipher().encrypt(newValue.toString());
+      }
+      String[] path = key.split("\\.");
+      ObjectNode parent = root;
+      for (int i = 0; i < path.length - 1; i++) {
+        JsonNode child = parent.get(path[i]);
+        if (!(child instanceof ObjectNode)) {
+          throw new InvalidJsonDbApiUsageException("Cannot update '" + key + "' in collection " + collectionName
+              + ": '" + path[i] + "' is not an object");
+        }
+        parent = (ObjectNode) child;
+      }
+      parent.set(path[path.length - 1], objectMapper.valueToTree(newValue));
+    }
+    try {
+      return (T) objectMapper.readerFor(document.getClass())
+          .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+          .without(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+          .readValue(root);
+    } catch (JsonMappingException e) {
+      StringBuilder property = new StringBuilder();
+      for (JsonMappingException.Reference ref : e.getPath()) {
+        if (null != ref.getFieldName()) {
+          property.append(property.length() > 0 ? "." : "").append(ref.getFieldName());
+        }
+      }
+      throw new InvalidJsonDbApiUsageException("Cannot apply update to '" + property + "' in collection "
+          + collectionName + ": " + e.getOriginalMessage(), e);
+    } catch (IOException e) {
+      throw new InvalidJsonDbApiUsageException("Cannot apply update in collection " + collectionName, e);
+    }
+  }
+
   /* (non-Javadoc)
    * @see io.jsondb.JsonDBOperations#findAllAndModify(java.lang.String, io.jsondb.query.Update, java.lang.Class)
    */
@@ -1561,20 +1601,7 @@ public class JsonDBTemplate implements JsonDBOperations {
 
       while (resultItr.hasNext()) {
         T objectToModify = resultItr.next();
-        T clonedModifiedObject = (T) Util.deepCopy(objectToModify);
-
-        for (Entry<String, Object> entry : update.getUpdateData().entrySet()) {
-          Object newValue = Util.deepCopy(entry.getValue());
-          if(encrypted && cmd.hasSecret() && cmd.isSecretField(entry.getKey())){
-            newValue = dbConfig.getCipher().encrypt(newValue.toString());
-          }
-          try {
-            BeanUtils.copyProperty(clonedModifiedObject, entry.getKey(), newValue);
-          } catch (IllegalAccessException | InvocationTargetException e) {
-            logger.error("Failed to copy updated data into existing collection document using BeanUtils", e);
-            return null;
-          }
-        }
+        T clonedModifiedObject = applyUpdate(objectToModify, update, cmd, collectionName);
         Object id = Util.getIdForEntity(clonedModifiedObject, cmd.getIdAnnotatedFieldGetterMethod());
         clonedModifiedObjects.put(id, clonedModifiedObject);
       }
