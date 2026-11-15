@@ -83,6 +83,7 @@ public class CollectionMetaData {
 
     //Populate the class metadata
     setupClassMetadata(clazz);
+    ReflectionDynamicPropertyHandler.registerIfNeeded(clazz);
 
     this.idAnnotatedFieldGetterMethod = getterMethodMap.get(idAnnotatedFieldName);
     this.idAnnotatedFieldSetterMethod = setterMethodMap.get(idAnnotatedFieldName);

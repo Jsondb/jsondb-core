@@ -3,7 +3,10 @@ package io.jsondb.tests;
 import io.jsondb.CollectionMetaData;
 import io.jsondb.JsonDBConfig;
 import io.jsondb.JsonDBTemplate;
+import io.jsondb.ReflectionDynamicPropertyHandler;
 import io.jsondb.tests.model.Instance;
+import org.apache.commons.jxpath.JXPathContext;
+import org.apache.commons.jxpath.JXPathIntrospector;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -134,6 +137,21 @@ public class AndroidDiscoveryTests {
     item.setHostname("explicit-host");
     db.insert(item);
     assertEquals(1, db.findAll(Instance.class).size());
+  }
+
+  @Test
+  public void testReflectionDynamicPropertyHandlerSupportsJxPathQueriesWithoutIntrospector() {
+    ReflectionDynamicPropertyHandler handler = new ReflectionDynamicPropertyHandler();
+    Instance instance = new Instance();
+    handler.setProperty(instance, "id", "dyn-1");
+    handler.setProperty(instance, "hostname", "android-art");
+    assertEquals("dyn-1", handler.getProperty(instance, "id"));
+    assertEquals("android-art", handler.getProperty(instance, "hostname"));
+
+    JXPathIntrospector.registerDynamicClass(Instance.class, ReflectionDynamicPropertyHandler.class);
+    JXPathContext ctx = JXPathContext.newContext(Collections.singletonList(instance));
+    Object matched = ctx.getValue("/.[id='dyn-1']/hostname");
+    assertEquals("android-art", matched);
   }
 
   private File packageIndexJar(String entryName, File contentFile) throws IOException {
