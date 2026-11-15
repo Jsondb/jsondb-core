@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New
+
+- `count(Class)` and `count(String collectionName)` return the number of documents in a collection without copying them, as `findAll()` does. (#54)
+
 ## 1.1.0
 
 The first release since 1.0.115 (March 2020). **It runs on Java 8 and later:** one artifact replaces the separate `-j8` and `-j11` builds.
