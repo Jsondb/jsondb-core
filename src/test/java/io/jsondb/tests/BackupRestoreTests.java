@@ -42,6 +42,9 @@ import com.google.common.io.Files;
 import io.jsondb.InvalidJsonDbApiUsageException;
 import io.jsondb.JsonDBTemplate;
 import io.jsondb.Util;
+import io.jsondb.crypto.Default1Cipher;
+import io.jsondb.crypto.DefaultAESCBCCipher;
+import io.jsondb.crypto.ICipher;
 import io.jsondb.io.JsonDbArchive;
 import io.jsondb.query.Update;
 import io.jsondb.tests.model.Instance;
@@ -215,5 +218,45 @@ public class BackupRestoreTests {
     template.restore(backupZip.getAbsolutePath(), false);
 
     assertEquals(7, TestUtils.getNoOfLinesInFile(instancesJson));
+  }
+
+  /**
+   * Backup files hold @Secret fields already encrypted. Merging them back must not encrypt them a
+   * second time, or the restored secrets come back as ciphertext.
+   */
+  @Test
+  public void testRestoreMergeOnEncryptedDatabaseKeepsSecretsReadable() throws Exception {
+    ICipher cipher = new DefaultAESCBCCipher("1r8+24pibarAWgS85/Heeg==");
+    JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model", cipher);
+    assertEquals("b87eb02f5dd7e5232d7b0fc30a5015e4", template.findById("01", Instance.class).getPrivateKey());
+    template.backup(backupZip.getAbsolutePath());
+
+    Instance changed = template.findById("01", Instance.class);
+    changed.setPrivateKey("changed-after-backup");
+    template.save(changed, Instance.class);
+
+    template.restore(backupZip.getAbsolutePath(), true);
+
+    assertEquals("b87eb02f5dd7e5232d7b0fc30a5015e4", template.findById("01", Instance.class).getPrivateKey());
+    assertEquals("b87eb02f5dd7e5232d7b0fc30a5015e4", template.findById("02", Instance.class).getPrivateKey());
+    template.reLoadDB();
+    assertEquals("b87eb02f5dd7e5232d7b0fc30a5015e4", template.findById("01", Instance.class).getPrivateKey());
+  }
+
+  @Test
+  public void testRestoreMergeWithDefault1CipherKeepsSecretsReadable() throws Exception {
+    Util.delete(instancesJson);
+    JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model", new Default1Cipher("1r8+24pibarAWgS85/Heeg=="));
+    template.createCollection(Instance.class);
+    Instance instance = new Instance();
+    instance.setId("07");
+    instance.setPrivateKey("original-secret");
+    template.insert(instance);
+    template.backup(backupZip.getAbsolutePath());
+
+    template.findAndModify("/.[id='07']", Update.update("privateKey", "changed-after-backup"), Instance.class);
+    template.restore(backupZip.getAbsolutePath(), true);
+
+    assertEquals("original-secret", template.findById("07", Instance.class).getPrivateKey());
   }
 }
