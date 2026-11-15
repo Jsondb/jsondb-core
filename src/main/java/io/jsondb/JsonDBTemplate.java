@@ -39,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1658,8 +1659,8 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    *
    * Values are converted with the same Jackson rules used to read the collection files, so an update
    * accepts what the file format accepts. A key can name a nested property with dots, such as
-   * "address.city". An update that names an unknown property, sets null into a primitive or would
-   * lose data (such as 7.9 into a long) is rejected.
+   * "address.city". An update that names an unknown property, sets null into a primitive, would
+   * lose data (such as 7.9 into a long) or changes the document's @Id is rejected.
    */
   @SuppressWarnings("unchecked")
   private <T> T applyUpdate(T document, Update update, CollectionMetaData cmd, String collectionName) {
@@ -1683,8 +1684,9 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       parent.set(path[path.length - 1], objectMapper.valueToTree(newValue));
     }
+    T updated;
     try {
-      return (T) objectMapper.readerFor(document.getClass())
+      updated = (T) objectMapper.readerFor(document.getClass())
           .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
           .without(DeserializationFeature.ACCEPT_FLOAT_AS_INT)
           .readValue(root);
@@ -1700,6 +1702,14 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     } catch (IOException e) {
       throw new InvalidJsonDbApiUsageException("Cannot apply update in collection " + collectionName, e);
     }
+    // Documents are stored by id, so a changed id would leave the original and add a copy (issue #78)
+    Method idGetter = cmd.getIdAnnotatedFieldGetterMethod();
+    if (!Objects.equals(Util.getIdForEntity(document, idGetter), Util.getIdForEntity(updated, idGetter))) {
+      throw new InvalidJsonDbApiUsageException("Cannot change the @Id field '" + cmd.getIdAnnotatedFieldName()
+          + "' of a document in collection " + collectionName + " with an update; remove the document and insert it"
+          + " with the new id instead");
+    }
+    return updated;
   }
 
   /* (non-Javadoc)

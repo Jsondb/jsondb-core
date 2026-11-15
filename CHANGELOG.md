@@ -4,6 +4,7 @@
 
 ### Bug fixes
 
+- Changing a document's `@Id` with `findAndModify()` or `findAllAndModify()` left the original document in place and added a copy under the new id. Such an update is now rejected with `InvalidJsonDbApiUsageException`; remove the document and insert it with the new id instead. Setting the id to its current value is still allowed. (#78)
 - A `@Document` class without JsonDB's `@Id` annotation, for example one using `javax.persistence.Id`, failed with a bare `NullPointerException`. It now fails with an `InvalidJsonDbApiUsageException` naming the class and the annotation it needs. (#23)
 
 ### New
