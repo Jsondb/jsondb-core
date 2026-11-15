@@ -18,10 +18,23 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+buildscript {
+    dependencies {
+        constraints {
+            // The publishing plugin uploads releases through retrofit, which asks for OkHttp 3.14.9.
+            // That version can accept the wrong TLS certificate (CVE-2021-0341); OkHttp 4 is binary
+            // compatible with 3.x and fixed.
+            classpath('com.squareup.okhttp3:okhttp:4.12.0') {
+                because 'OkHttp 3.14.9 has CVE-2021-0341 (GHSA-3cqm-mf7h-prrj)'
+            }
+        }
+    }
+}
+
 plugins {
     id 'java'
     id 'jacoco'
-    id 'maven-publish'
+    id 'com.vanniktech.maven.publish' version '0.35.0'
     id 'signing'
     id 'eclipse'
     id 'idea'
@@ -43,11 +56,11 @@ ext {
     hamcrestVersion = '2.2'
 }
 
+// One artifact for every supported Java version: the build runs on JDK 17, but the code is compiled
+// for Java 8, and the compiler rejects any API newer than Java 8.
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
-    withJavadocJar()
-    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 repositories {
@@ -84,6 +97,9 @@ dependencies {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.release = 8
+    // JDK 17 warns that compiling for Java 8 is obsolete; that is intended here
+    options.compilerArgs << '-Xlint:-options'
 }
 
 tasks.withType(Javadoc).configureEach {
@@ -96,6 +112,19 @@ tasks.test {
             '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
             '--add-opens', 'java.base/java.lang.reflect=ALL-UNNAMED'
     )
+}
+
+// The same tests on a real Java 8 runtime, the oldest Java this library supports. Compiling for
+// Java 8 only proves the APIs exist; this proves the code behaves the same there.
+tasks.register('testOnJava8', Test) {
+    description = 'Runs the unit tests on a Java 8 runtime.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
+    useJUnit()
 }
 
 jacocoTestReport {
@@ -130,70 +159,74 @@ cleanEclipseJdt {
 }
 tasks.eclipse.dependsOn(cleanEclipse)
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
+/*
+ * Publishing to Maven Central through the Central Portal. Credentials and the signing key never
+ * live in this repository: they are read from ~/.gradle/gradle.properties. See RELEASING.md.
+ */
+mavenPublishing {
+    configure(new com.vanniktech.maven.publish.JavaLibrary(new com.vanniktech.maven.publish.JavadocJar.Javadoc(), true))
+    // Uploads a deployment that waits on central.sonatype.com until it is published by hand
+    publishToMavenCentral()
+    // Only sign when a key is configured, so contributors can still run publishToMavenLocal.
+    // Maven Central rejects unsigned uploads, so a release cannot go out unsigned.
+    if (project.hasProperty('signing.gnupg.keyName') || project.hasProperty('signingInMemoryKey')) {
+        signAllPublications()
+    }
 
-            pom {
-                name = 'jsondb-core'
-                packaging = 'jar'
-                description = 'A pure java JSON based database.'
-                url = 'http://www.jsondb.io'
+    coordinates('io.jsondb', 'jsondb-core', version.toString())
 
-                scm {
-                    connection = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
-                    developerConnection = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
-                    url = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
-                }
+    pom {
+        name = 'jsondb-core'
+        description = 'A pure java JSON based database.'
+        inceptionYear = '2016'
+        url = 'https://jsondb.github.io'
 
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
-                    }
-                }
-
-                developers {
-                    developer {
-                        id = 'FarooqKhan'
-                        name = 'Farooq Khan'
-                        email = 'FarooqKhan@users.noreply.github.com'
-                    }
-                }
+        licenses {
+            license {
+                name = 'MIT License'
+                url = 'https://opensource.org/licenses/MIT'
+                distribution = 'repo'
             }
         }
-    }
-    repositories {
-        maven {
-            name = 'OSSRH'
-            def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
-            def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = OSSRH_USERNAME
-                password = OSSRH_PASSWORD
+
+        developers {
+            developer {
+                id = 'FarooqKhan'
+                name = 'Farooq Khan'
+                email = 'FarooqKhan@users.noreply.github.com'
+                url = 'https://github.com/FarooqKhan'
             }
+        }
+
+        scm {
+            url = 'https://github.com/Jsondb/jsondb-core'
+            connection = 'scm:git:https://github.com/Jsondb/jsondb-core.git'
+            developerConnection = 'scm:git:ssh://git@github.com/Jsondb/jsondb-core.git'
         }
     }
 }
 
 signing {
-    required { gradle.taskGraph.hasTask('publish') }
-    sign publishing.publications.mavenJava
+    // Sign through the local gpg agent when ~/.gradle/gradle.properties names the key to use
+    if (project.hasProperty('signing.gnupg.keyName')) {
+        useGpgCmd()
+    }
 }
 
 /*
- * Gets the version name from the latest Git tag
+ * Builds the version from the latest version-line tag and the number of commits since it: on the
+ * commit tagged "1.1" `git describe` prints "1.1" and the version is 1.1.0; five commits later it
+ * prints "1.1-5-gabc1234" and the version is 1.1.5. Only tags starting with a digit are version-line
+ * tags; the "v1.1.0"-style tags that mark GitHub releases are ignored.
  */
 def getVersionName() {
-    def stdout = new ByteArrayOutputStream()
-    exec {
-        commandLine 'git', 'describe', '--tags'
-        standardOutput = stdout
+    def describe = providers.exec {
+        commandLine 'git', 'describe', '--tags', '--match', '[0-9]*'
+    }.standardOutput.asText.get().trim()
+    def matcher = describe =~ /^(.+?)(?:-(\d+)-g[0-9a-f]+)?$/
+    if (!matcher.matches()) {
+        throw new GradleException("Cannot derive a version from git describe output: " + describe)
     }
-    def versionString = stdout.toString().replaceFirst('-', '.')
-    versionString = versionString.substring(0, versionString.indexOf('-'))
-
-    return versionString + '-j17'
+    def commitsSinceTag = matcher.group(2) ?: '0'
+    return matcher.group(1) + '.' + commitsSinceTag
 }

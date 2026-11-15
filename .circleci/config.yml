@@ -19,7 +19,7 @@ jobs:
           name: Test
           command: |
             for attempt in 1 2 3; do
-              ./gradlew test jacocoTestReport && exit 0
+              ./gradlew test testOnJava8 jacocoTestReport && exit 0
               echo "Gradle failed on attempt ${attempt}, retrying in 30s..."
               sleep 30
             done
