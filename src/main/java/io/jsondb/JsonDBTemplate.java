@@ -281,18 +281,20 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   }
 
   private void initialize(){
-    this.lockFilesLocation = new File(dbConfig.getDbFilesLocation(), "lock");
-    if(!lockFilesLocation.exists()) {
-      lockFilesLocation.mkdirs();
+    File dbFilesLocation = dbConfig.getDbFilesLocation();
+    if (dbFilesLocation.isFile()) {
+      throw new InvalidJsonDbApiUsageException("Specified DbFiles directory is actually a file cannot use it as a directory");
     }
-    if (!dbConfig.getDbFilesLocation().exists()) {
+    if (!dbFilesLocation.exists()) {
       try {
-        Files.createDirectory(dbConfig.getDbFilesPath());
+        Files.createDirectories(dbConfig.getDbFilesPath());
       } catch (IOException e) {
         throw new InvalidJsonDbApiUsageException("DbFiles directory does not exist. Failed to create a new empty DBFiles directory " + dbConfig.getDbFilesLocationString(), e);
       }
-    } else if (dbConfig.getDbFilesLocation().isFile()) {
-      throw new InvalidJsonDbApiUsageException("Specified DbFiles directory is actually a file cannot use it as a directory");
+    }
+    this.lockFilesLocation = new File(dbFilesLocation, "lock");
+    if(!lockFilesLocation.exists()) {
+      lockFilesLocation.mkdirs();
     }
 
     cmdMap = CollectionMetaData.builder(dbConfig);

@@ -150,6 +150,10 @@ public class Util {
     return id;
   }
 
+  /**
+   * @deprecated JsonDB no longer uses this; it will be removed in a future release
+   */
+  @Deprecated
   protected static Object setFieldValueForEntity(Object document, Object newValue, Method setterMethod) {
     Object retval = null;
     if (null != setterMethod) {

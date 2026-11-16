@@ -201,6 +201,7 @@ public class JsonWriterOperationsTests {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testRenameKeyInJsonFile() throws Exception {
     JsonDBTemplate template = new JsonDBTemplate(DB, "io.jsondb.tests.model");
     List<Instance> instances = template.findAll(Instance.class);
@@ -273,6 +274,7 @@ public class JsonWriterOperationsTests {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testReadonlyCollectionRejectsRenameKey() throws Exception {
     CollectionMetaData readonlyCmd = cmd();
     readonlyCmd.setActualSchemaVersion("0.9");

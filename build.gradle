@@ -22,8 +22,9 @@ buildscript {
     dependencies {
         constraints {
             // The publishing plugin uploads releases through retrofit, which asks for OkHttp 3.14.9.
-            // That version can accept the wrong TLS certificate (CVE-2021-0341); OkHttp 4 is binary
-            // compatible with 3.x and fixed.
+            // That version can accept the wrong TLS certificate (CVE-2021-0341). OkHttp 4 and later
+            // are fixed and keep the 3.x API that retrofit calls; 5.x is untested until the next
+            // release uploads through it.
             classpath('com.squareup.okhttp3:okhttp:5.5.1') {
                 because 'OkHttp 3.14.9 has CVE-2021-0341 (GHSA-3cqm-mf7h-prrj)'
             }
@@ -65,17 +66,6 @@ java {
 
 repositories {
     mavenCentral()
-}
-
-configurations.configureEach {
-    resolutionStrategy {
-        eachDependency { details ->
-            if (details.requested.group == 'commons-collections' && details.requested.name == 'commons-collections') {
-                details.useVersion '3.2.2'
-                details.because 'Pin commons-collections to latest 3.x with security fixes'
-            }
-        }
-    }
 }
 
 dependencies {
