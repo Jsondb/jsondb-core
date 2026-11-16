@@ -379,7 +379,11 @@ public class JsonWriter {
    * @param <T> Type annotated with {@link io.jsondb.annotation.Document} annotation
    *            and member of the baseScanPackage
    * @return true if success
+   * @deprecated JsonDB no longer uses this: updateCollectionSchema renames properties in the parsed
+   *             documents instead (issue #57), because a text replacement can also change a matching
+   *             key inside a nested object or a string value. It will be removed in a future release.
    */
+  @Deprecated
   public <T> boolean renameKeyInJsonFile(Collection<T> collection, boolean ignoreReadonly, String oldKey, String newKey) {
     // Matching the quotes and colon keeps a value that happens to contain the key name intact. It does
     // break if single quotes (invalid JSON) are used together with JsonParser.Feature.ALLOW_SINGLE_QUOTES

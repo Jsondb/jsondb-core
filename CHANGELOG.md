@@ -10,6 +10,10 @@
 
 - Errors that are thrown to the caller are no longer also logged at error level, so applications that log what they catch no longer see each failure twice. Where an exception used to drop its cause, which then only appeared in the log, it now carries it: creating or deleting a collection file, creating the database folder, and `DefaultAESCBCCipher`'s invalid-key error.
 
+### Deprecations
+
+- `JsonWriter.renameKeyInJsonFile()` and `Util.setFieldValueForEntity()` are no longer used by JsonDB and will be removed in a future release. Schema renames go through `updateCollectionSchema()`.
+
 ### Bug fixes
 
 - When a write could not be saved (the collection's lock unavailable, or no temporary file could be created, e.g. in a read-only folder), `insert`, `save`, `upsert`, `remove`, `findAndRemove`, `findAllAndRemove`, `findAndModify` and `findAllAndModify` returned normally, and the remove methods returned `null`, as if the write had succeeded or matched nothing. They now throw `JsonDBException`, and the collection is unchanged in memory and on disk.

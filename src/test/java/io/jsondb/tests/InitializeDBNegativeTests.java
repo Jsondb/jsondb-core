@@ -124,4 +124,24 @@ public class InitializeDBNegativeTests {
     jsonDBTemplate.reloadCollection("instances");
     assertTrue(!jsonDBTemplate.collectionExists("instances"));
   }
+
+  /**
+   * A database folder that cannot be created must fail with a clear error, not later with a missing file
+   */
+  @Test
+  public void testUncreatableDBLocationFailsClearly() {
+    File readOnlyParent = new File(dbFilesFolder, "readOnlyParent");
+    readOnlyParent.mkdir();
+    readOnlyParent.setWritable(false);
+    try {
+      org.junit.Assume.assumeFalse("running with permission to write to read-only folders", readOnlyParent.canWrite());
+      new JsonDBTemplate(new File(readOnlyParent, "db").toString(), "io.jsondb.tests.model");
+      fail("a database folder that could not be created was accepted");
+    } catch (InvalidJsonDbApiUsageException expected) {
+      assertTrue(expected.getMessage().contains("Failed to create a new empty DBFiles directory"));
+      assertTrue(expected.getCause() instanceof IOException);
+    } finally {
+      readOnlyParent.setWritable(true);
+    }
+  }
 }

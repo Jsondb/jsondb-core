@@ -176,6 +176,7 @@ public class JsonWriterOutputTests {
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testRenameKeyRenamesItInEveryDocument() throws Exception {
     assertTrue(writer().renameKeyInJsonFile(existing(), false, "hostname", "hostName"));
     List<String> want = new ArrayList<String>();
