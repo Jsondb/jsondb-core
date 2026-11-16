@@ -1,0 +1,66 @@
+# Runs the instrumented tests in android-test/ on an Android emulator, against jsondb-core built
+# from this commit. It is a separate workflow from CircleCI and not a required check yet.
+name: Android
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  instrumented-tests:
+    name: API ${{ matrix.api-level }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest release jsondb-core supports (minSdk) and the newest one.
+        api-level: [26, 36]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The build derives its version from git describe, which needs the tags.
+          fetch-depth: 0
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      # Without this the emulator has no hardware acceleration and times out while booting.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Build the app and test APKs
+        run: ./gradlew -p android-test :app:assembleDebug :app:assembleDebugAndroidTest
+
+      - name: Run the tests on the emulator
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: ./gradlew -p android-test :app:connectedDebugAndroidTest
+
+      - name: Upload the test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-test-reports-api-${{ matrix.api-level }}
+          path: android-test/app/build/reports/androidTests/
