@@ -10,6 +10,11 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # android-test/ includes the root build, so without this list Dependabot opens a second pull
+    # request for every jsondb-core dependency. JUnit and JXPath are left to the root entry.
+    allow:
+      - dependency-name: "com.android.application*"
+      - dependency-name: "androidx.test*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
