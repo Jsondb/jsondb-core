@@ -27,3 +27,6 @@
 
 # CircleCI deploy keys (private keys must never be committed)
 .circleci/deploy-keys/
+
+# Android SDK location, written by Android Studio
+android-test/local.properties
