@@ -6,6 +6,10 @@ jobs:
       # Configure the JVM and Gradle to avoid OOM errors
       _JAVA_OPTIONS: "-Xmx3g"
       GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+      # The image sets JAVA_TOOL_OPTIONS=-XX:-UseBASE64Intrinsics, which Java 8 rejects, so the Java 8
+      # that testOnJava8 downloads cannot start. JDK_JAVA_OPTIONS keeps the flag for JDK 17 only.
+      JAVA_TOOL_OPTIONS: ""
+      JDK_JAVA_OPTIONS: "-XX:-UseBASE64Intrinsics"
     docker:
       - image: cimg/openjdk:17.0
 
