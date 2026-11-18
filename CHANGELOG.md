@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.63
+
 ### New features
 
 - `JsonDBTemplate.setSyncFolderOnWrite(true)` forces the database folder to disk after every write, so a write that returned is never lost in a crash or power loss. It makes writes several times slower, so it is off by default.
