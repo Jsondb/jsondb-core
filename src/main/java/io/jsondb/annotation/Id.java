@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -29,6 +29,20 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Marks the field that holds a document's id. Every {@link Document} class needs one.
+ *
+ * <p>When a document is inserted or upserted without an id, JsonDB generates one:</p>
+ * <ul>
+ *   <li>a {@code Long}, {@code Integer}, {@code long} or {@code int} id gets the next number after the
+ *       highest id in the collection, starting at 1. For {@code long} and {@code int}, which cannot be
+ *       null, 0 means no id.</li>
+ *   <li>a {@code String} id gets a random UUID.</li>
+ * </ul>
+ *
+ * <p>Numbers are not stored anywhere but in the documents, so they are not a database sequence: when
+ * the document with the highest id is removed, the next insert gets that id again. Ids are handed out
+ * safely to threads sharing one JsonDBTemplate, but not to several processes writing the same folder.</p>
+ *
  * @version 1.0 25-Sep-2016
  */
 @Retention(RetentionPolicy.RUNTIME)

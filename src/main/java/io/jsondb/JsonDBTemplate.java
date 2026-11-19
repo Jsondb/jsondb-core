@@ -251,6 +251,18 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    * @param saved the result of the JsonWriter operation
    * @throws JsonDBException if the write did not reach the collection file; JsonWriter has logged why
    */
+  /**
+   * @return the ids for a batch's documents that have none, never one already in the collection or
+   *     set on another document of the batch
+   */
+  private static IdSequence idSequenceFor(CollectionMetaData cmd, Map<Object, ?> collection, Collection<?> batch) {
+    IdSequence ids = new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet());
+    for (Object document : batch) {
+      ids.reserve(Util.getIdForEntity(document, cmd.getIdAnnotatedFieldGetterMethod()));
+    }
+    return ids;
+  }
+
   private static void requireSaved(boolean saved, String collectionName) {
     if (!saved) {
       throw new JsonDBException("Failed to save collection " + collectionName + ", nothing was changed");
@@ -1140,8 +1152,9 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       if(encrypted && cmd.hasSecret()){
         CryptoUtil.encryptFields(objToSave, cmd, dbConfig.getCipher());
       }
-      if (null == id) {
-        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod());
+      if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
+        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod(),
+            new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet()).next());
       } else if (collection.containsKey(id)) {
         throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
       }
@@ -1184,14 +1197,15 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       CollectionMetaData cmd = cmdMap.get(collectionName);
       Set<Object> uniqueIds = new HashSet<Object>();
       Map<Object, T> newCollection = new LinkedHashMap<Object, T>();
+      IdSequence ids = idSequenceFor(cmd, collection, batchToSave);
       for (T o : batchToSave) {
         Object obj = Util.deepCopy(o);
         Object id = Util.getIdForEntity(obj, cmd.getIdAnnotatedFieldGetterMethod());
         if(encrypted && cmd.hasSecret()){
           CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
         }
-        if (null == id) {
-          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod());
+        if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod(), ids.next());
         } else if (collection.containsKey(id)) {
           throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
         }
@@ -1401,8 +1415,9 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
 
       boolean insert = true;
-      if (null == id) {
-        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod());
+      if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
+        id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod(),
+            new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet()).next());
       } else if (collection.containsKey(id)) {
         insert = false;
       }
@@ -1452,6 +1467,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
 
       Map<Object, T> collectionToInsert = new LinkedHashMap<Object, T>();
       Map<Object, T> collectionToUpdate = new LinkedHashMap<Object, T>();
+      IdSequence ids = idSequenceFor(cmd, collection, batchToSave);
 
       for (T o : batchToSave) {
         Object obj = Util.deepCopy(o);
@@ -1460,8 +1476,8 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
           CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
         }
         boolean insert = true;
-        if (null == id) {
-          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod());
+        if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod(), ids.next());
         } else if (collection.containsKey(id)) {
           insert = false;
         }

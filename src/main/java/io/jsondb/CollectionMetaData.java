@@ -50,6 +50,7 @@ public class CollectionMetaData {
   private Class<?> clazz;
 
   private String idAnnotatedFieldName;
+  private Class<?> idAnnotatedFieldType;
   private Method idAnnotatedFieldGetterMethod;
   private Method idAnnotatedFieldSetterMethod;
 
@@ -99,6 +100,7 @@ public class CollectionMetaData {
           //We expect only one @Id annotated field and only one corresponding getter for it
           //This logic will capture the last @Id annotated field if there are more than one.
           this.idAnnotatedFieldName = fieldName;
+          this.idAnnotatedFieldType = f.getType();
         }
         if (a.annotationType().equals(Secret.class)) {
           this.secretAnnotatedFieldNames.add(fieldName);
@@ -153,6 +155,13 @@ public class CollectionMetaData {
 
   public String getIdAnnotatedFieldName() {
     return idAnnotatedFieldName;
+  }
+
+  /**
+   * @return the declared type of the @Id field, e.g. String, Long or int
+   */
+  public Class<?> getIdAnnotatedFieldType() {
+    return idAnnotatedFieldType;
   }
 
   public Method getIdAnnotatedFieldGetterMethod() {

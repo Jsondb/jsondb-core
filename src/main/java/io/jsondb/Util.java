@@ -126,14 +126,24 @@ public class Util {
   /**
    * A utility method to set the value of field marked by the @Id annotation using its
    * setter/mutator method.
-   * TODO: Some day we want to support policies for generation of ID like AutoIncrement etc.
    *
    * @param document the actual Object representing the POJO we want the Id to be set for.
    * @param setterMethodForId the Method that is the mutator for the attributed with @Id annotation
    * @return the Id that was generated and set
    */
   protected static Object setIdForEntity(Object document, Method setterMethodForId) {
-    Object id = UUID.randomUUID().toString();
+    return setIdForEntity(document, setterMethodForId, UUID.randomUUID().toString());
+  }
+
+  /**
+   * Sets the given id on the field marked by the @Id annotation
+   *
+   * @param document the actual Object representing the POJO we want the Id to be set for.
+   * @param setterMethodForId the Method that is the mutator for the attributed with @Id annotation
+   * @param id the id to set
+   * @return the id
+   */
+  static Object setIdForEntity(Object document, Method setterMethodForId, Object id) {
     if (null != setterMethodForId) {
       try {
         // The caller stores the document under the returned id, so return the generated id itself;
