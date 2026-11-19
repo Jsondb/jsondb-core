@@ -20,6 +20,7 @@
  */
 package io.jsondb;
 
+import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -39,14 +40,6 @@ final class IdSequence {
   private final String collectionName;
   private final long maxValue;
   private long last;
-
-  /**
-   * @param idType the type of the collection's @Id field
-   * @param existingIds the ids already in the collection
-   */
-  IdSequence(Class<?> idType, Collection<?> existingIds) {
-    this(idType, existingIds, null, null);
-  }
 
   /**
    * @param idType the type of the collection's @Id field
@@ -128,25 +121,11 @@ final class IdSequence {
     return idType != null && idType.isPrimitive() && isNumeric(idType) && ((Number) id).longValue() == 0;
   }
 
+  /**
+   * @return the wrapper class of a primitive type, e.g. Integer for int, or the type itself
+   */
   private static Class<?> boxed(Class<?> type) {
-    if (type == int.class) {
-      return Integer.class;
-    } else if (type == long.class) {
-      return Long.class;
-    } else if (type == short.class) {
-      return Short.class;
-    } else if (type == byte.class) {
-      return Byte.class;
-    } else if (type == double.class) {
-      return Double.class;
-    } else if (type == float.class) {
-      return Float.class;
-    } else if (type == char.class) {
-      return Character.class;
-    } else if (type == boolean.class) {
-      return Boolean.class;
-    }
-    return type;
+    return MethodType.methodType(type).wrap().returnType();
   }
 
   private static boolean isNumeric(Class<?> type) {
