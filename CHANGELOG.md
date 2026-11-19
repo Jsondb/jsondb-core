@@ -14,6 +14,7 @@
 
 ### Bug fixes
 
+- In strict mode (`compatibilityMode` false), `updateCollectionSchema()` could not migrate a collection whose file still had keys the class no longer has: the file failed to load, so the update threw "Collection ... not found. Create collection first", and `createCollection()` refused because the file exists. The update now runs on the file even when the collection did not load, and loads it afterwards. (#84)
 - A database folder that JsonDB cannot write to (e.g. a read-only mount, or files owned by another user) opened as an empty database: no collection loaded, and the only sign was an error in the log. Opening it now throws `InvalidJsonDbApiUsageException`, saying the folder is not writable and pointing to the read-only mode. (#111)
 
 ## 1.1.63

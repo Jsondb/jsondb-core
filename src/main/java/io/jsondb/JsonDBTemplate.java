@@ -605,9 +605,10 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   public <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName) {
     requireWritable();
     CollectionMetaData cmd = cmdMap.get(collectionName);
-    @SuppressWarnings("unchecked")
-    Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
-    if((null == cmd) || (null == collection)) {
+    // The update works on the file, so it also migrates a collection that did not load, e.g. in
+    // strict mode because the file still has keys the class no longer has (#84)
+    File collectionFile = new File(dbConfig.getDbFilesLocation(), collectionName + ".json");
+    if((null == cmd) || (!collectionsRef.get().containsKey(collectionName) && !collectionFile.isFile())) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     if (null == update) {
@@ -669,7 +670,6 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       // are already instances of the new class and have lost any key it does not know, which is
       // exactly what a renamed field looks like, so renaming them lost the data (issue #57).
       ObjectReader reader = objectMapper.readerFor(cmd.getClazz()).without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-      File collectionFile = fileObjectsRef.get().get(collectionName);
       List<Object> documents = new ArrayList<Object>();
       Set<String> conflictingIds = new LinkedHashSet<String>();
       JsonReader jr = new JsonReader(dbConfig, collectionFile);
