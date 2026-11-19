@@ -89,6 +89,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
 
   private JsonDBConfig dbConfig = null;
   private final boolean encrypted;
+  private final boolean readOnly;
   private File lockFilesLocation;
   private EventListenerList eventListenerList;
 
@@ -174,8 +175,32 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     return dbConfig.isSyncFolderOnWrite();
   }
 
-  private JsonDBTemplate(JsonDBConfig dbConfig) {
+  /**
+   * @return true if the database was opened read-only, see {@link JsonDBConfig#setReadOnly(boolean)}
+   */
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
+  /**
+   * @throws InvalidJsonDbApiUsageException if the database was opened read-only
+   */
+  private void requireWritable() {
+    if (readOnly) {
+      throw new InvalidJsonDbApiUsageException("The database in " + dbConfig.getDbFilesLocationString()
+          + " is opened read-only, it cannot be changed");
+    }
+  }
+
+  /**
+   * Opens the database described by a config, e.g. one set to read-only with
+   * {@link JsonDBConfig#setReadOnly(boolean)}. The config's read-only setting is read once, here.
+   *
+   * @param dbConfig the database's location, entity classes or package, cipher and options
+   */
+  public JsonDBTemplate(JsonDBConfig dbConfig) {
     this.dbConfig = dbConfig;
+    this.readOnly = dbConfig.isReadOnly();
     ICipher cipher = dbConfig.getCipher();
     if (null == cipher) {
       logger.debug("Encryption is not enabled for JSON DB");
@@ -211,6 +236,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    * @throws JsonDBException if the collection's lock file cannot be opened
    */
   private JsonWriter writerFor(String collectionName, CollectionMetaData cmd) {
+    requireWritable();
     try {
       return new JsonWriter(dbConfig, cmd, collectionName, fileObjectsRef.get().get(collectionName));
     } catch (IOException ioe) {
@@ -285,7 +311,13 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     if (dbFilesLocation.isFile()) {
       throw new InvalidJsonDbApiUsageException("Specified DbFiles directory is actually a file cannot use it as a directory");
     }
-    if (!dbFilesLocation.exists()) {
+    if (readOnly) {
+      // Nothing is created in a read-only database, not even the lock folder
+      if (!dbFilesLocation.isDirectory()) {
+        throw new InvalidJsonDbApiUsageException("Cannot open the database read-only, the DbFiles directory "
+            + dbConfig.getDbFilesLocationString() + " does not exist");
+      }
+    } else if (!dbFilesLocation.exists()) {
       try {
         Files.createDirectories(dbConfig.getDbFilesPath());
       } catch (IOException e) {
@@ -293,8 +325,16 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
     }
     this.lockFilesLocation = new File(dbFilesLocation, "lock");
-    if(!lockFilesLocation.exists()) {
-      lockFilesLocation.mkdirs();
+    if (!readOnly) {
+      if(!lockFilesLocation.exists()) {
+        lockFilesLocation.mkdirs();
+      }
+      // Every read and write takes a lock file in this folder, so without it no collection would load
+      if (!lockFilesLocation.isDirectory() || !Files.isWritable(lockFilesLocation.toPath())) {
+        throw new InvalidJsonDbApiUsageException("Cannot open the database in " + dbConfig.getDbFilesLocationString()
+            + ": the lock folder " + lockFilesLocation + " is not writable. JsonDB needs write access to the database folder,"
+            + " or open it read-only with JsonDBConfig.setReadOnly(true).");
+      }
     }
 
     cmdMap = CollectionMetaData.builder(dbConfig);
@@ -383,7 +423,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     String line = null;
     int lineNo = 1;
     try {
-      jr = new JsonReader(dbConfig, collectionFile);
+      jr = new JsonReader(dbConfig, collectionFile, !readOnly);
 
       while ((line = jr.readLine()) != null) {
         if (lineNo == 1) {
@@ -464,6 +504,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    */
   @Override
   public <T> void createCollection(String collectionName) {
+    requireWritable();
     CollectionMetaData cmd = cmdMap.get(collectionName);
     if (null == cmd) {
       throw new InvalidJsonDbApiUsageException(
@@ -526,6 +567,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    */
   @Override
   public void dropCollection(String collectionName) {
+    requireWritable();
     CollectionMetaData cmd = cmdMap.get(collectionName);
     if((null == cmd) || (!collectionsRef.get().containsKey(collectionName))) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
@@ -561,6 +603,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    */
   @Override
   public <T> void updateCollectionSchema(CollectionSchemaUpdate update, String collectionName) {
+    requireWritable();
     CollectionMetaData cmd = cmdMap.get(collectionName);
     @SuppressWarnings("unchecked")
     Map<Object, T> collection = (Map<Object, T>) collectionsRef.get().get(collectionName);
@@ -772,7 +815,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   @Override
   public <T> boolean isCollectionReadonly(String collectionName) {
     CollectionMetaData cmd = metaDataFor(collectionName);
-    return cmd.isReadOnly();
+    return readOnly || cmd.isReadOnly();
   }
 
   /* (non-Javadoc)
@@ -1725,6 +1768,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   @SuppressWarnings("unchecked")
   @Override
   public <T> void changeEncryption(ICipher newCipher) {
+    requireWritable();
     if (!encrypted) {
       throw new InvalidJsonDbApiUsageException("DB is not encrypted, nothing to change for EncryptionKey");
     }
@@ -1797,6 +1841,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    */
   @Override
   public void restore(String restorePath, boolean merge) {
+    requireWritable();
     File zipFile;
     try {
       zipFile = JsonDbArchive.resolveRestoreZipFile(restorePath);

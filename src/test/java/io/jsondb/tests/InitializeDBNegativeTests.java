@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Farooq Khan
+ * Copyright (c) 2016 - 2026 Farooq Khan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to
@@ -142,6 +142,26 @@ public class InitializeDBNegativeTests {
       assertTrue(expected.getCause() instanceof IOException);
     } finally {
       readOnlyParent.setWritable(true);
+    }
+  }
+
+  /**
+   * A lock folder that exists but cannot be written to fails the same way
+   */
+  @Test
+  public void testReadOnlyLockFolderFailsClearly() throws IOException {
+    Files.copy(new File("src/test/resources/dbfiles/instances.json"), instancesJson);
+    File lockFolder = new File(dbFilesFolder, "lock");
+    lockFolder.mkdir();
+    lockFolder.setWritable(false);
+    try {
+      org.junit.Assume.assumeFalse("running with permission to write to read-only folders", lockFolder.canWrite());
+      new JsonDBTemplate(dbFilesLocation, "io.jsondb.tests.model");
+      fail("a database with a read-only lock folder was opened");
+    } catch (InvalidJsonDbApiUsageException expected) {
+      assertTrue(expected.getMessage(), expected.getMessage().contains("is not writable"));
+    } finally {
+      lockFolder.setWritable(true);
     }
   }
 }
