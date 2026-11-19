@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### New features
+
+- A database can be opened read-only, e.g. on a read-only mount or to read another application's data safely. Collections load without lock files, so the folder does not have to be writable, and every operation that would change the database (insert, save, upsert, remove, the find-and-modify/remove operations, creating or dropping collections, schema updates, `changeEncryption` and `restore`) throws `InvalidJsonDbApiUsageException`. `JsonDBTemplate` gains a public constructor that takes a `JsonDBConfig`:
+
+  ```java
+  JsonDBConfig config = new JsonDBConfig(dbPath, List.of(User.class), null, false, null);
+  config.setReadOnly(true);
+  JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(config);
+  ```
+
+### Bug fixes
+
+- A database folder that JsonDB cannot write to (e.g. a read-only mount, or files owned by another user) opened as an empty database: no collection loaded, and the only sign was an error in the log. Opening it now throws `InvalidJsonDbApiUsageException`, saying the folder is not writable and pointing to the read-only mode. (#111)
+
 ## 1.1.63
 
 ### New features

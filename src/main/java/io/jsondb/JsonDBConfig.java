@@ -52,6 +52,7 @@ public class JsonDBConfig {
   private ICipher cipher;
   private boolean compatibilityMode;
   private volatile boolean syncFolderOnWrite;
+  private boolean readOnly;
 
   //References
   private ObjectMapper objectMapper;
@@ -160,6 +161,20 @@ public class JsonDBConfig {
   }
   public void setSyncFolderOnWrite(boolean syncFolderOnWrite) {
     this.syncFolderOnWrite = syncFolderOnWrite;
+  }
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+  /**
+   * Opens the database read-only: collections load without lock files, so the folder does not have
+   * to be writable, and every operation that would change the database throws
+   * {@link io.jsondb.InvalidJsonDbApiUsageException}. Set it before passing this config to
+   * {@link io.jsondb.JsonDBTemplate#JsonDBTemplate(JsonDBConfig)}; a template reads it once, when it is created.
+   *
+   * @param readOnly true to open the database read-only
+   */
+  public void setReadOnly(boolean readOnly) {
+    this.readOnly = readOnly;
   }
   public ObjectMapper getObjectMapper() {
     return objectMapper;

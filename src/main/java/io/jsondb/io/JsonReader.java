@@ -60,7 +60,25 @@ public class JsonReader {
   private File fileLockLocation;
 
   public JsonReader(JsonDBConfig dbConfig, File collectionFile) throws IOException {
+    this(dbConfig, collectionFile, true);
+  }
+
+  /**
+   * @param takeLock false to read without a lock file, for a database opened read-only. Only safe
+   *     because writers move a complete new file into place, so a reader sees the old file or the new one.
+   */
+  public JsonReader(JsonDBConfig dbConfig, File collectionFile, boolean takeLock) throws IOException {
     this.collectionFile = collectionFile;
+    CharsetDecoder decoder = dbConfig.getCharset().newDecoder();
+    decoder.onMalformedInput(CodingErrorAction.REPORT);
+    decoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+    if (!takeLock) {
+      fis = new FileInputStream(collectionFile);
+      isr = new InputStreamReader(fis, decoder);
+      reader = new BufferedReader(isr);
+      return;
+    }
+
     this.lockFilesLocation = new File(collectionFile.getParentFile(), "lock");
     this.fileLockLocation = new File(lockFilesLocation, collectionFile.getName() + ".lock");
     
@@ -71,10 +89,6 @@ public class JsonReader {
       fileLockLocation.createNewFile();
     }
 
-    CharsetDecoder decoder = dbConfig.getCharset().newDecoder();
-    decoder.onMalformedInput(CodingErrorAction.REPORT);
-    decoder.onUnmappableCharacter(CodingErrorAction.REPORT);
-    
     raf = new RandomAccessFile(fileLockLocation, "rw");
     channel = raf.getChannel();
     try {
@@ -127,6 +141,15 @@ public class JsonReader {
       isr.close();
     } catch (IOException e) {
       logger.error("Failed to close InputStreamReader for collection file {}", collectionFile.getName(), e);
+    }
+    if (lock == null) {
+      // Read without a lock file, so there is no lock, channel or RandomAccessFile to close
+      try {
+        fis.close();
+      } catch (IOException e) {
+        logger.error("Failed to close FileInputStream for collection file {}", collectionFile.getName(), e);
+      }
+      return;
     }
     try {
       if(lock.isValid()) {
