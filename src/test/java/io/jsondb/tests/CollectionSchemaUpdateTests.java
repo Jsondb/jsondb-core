@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -326,6 +327,8 @@ public class CollectionSchemaUpdateTests {
     // A read-only database folder lets the file be read but not the temporary file be created
     assertTrue(dbFilesFolder.setWritable(false));
     try {
+      // A superuser can write to a read-only folder, so the update would succeed and prove nothing
+      Assume.assumeFalse("running with permission to write to read-only folders", dbFilesFolder.canWrite());
       jsonDBTemplate.updateCollectionSchema(CollectionSchemaUpdate.update("user", new RenameOperation("username")),
           LoadBalancer.class);
       fail("Expected the schema update to fail");
