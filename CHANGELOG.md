@@ -14,6 +14,15 @@
 
 - Documents with a numeric `@Id` (`Long`, `Integer`, `long` or `int`) inserted or upserted without an id now get the next number after the highest id in the collection, starting at 1. For `long` and `int`, 0 means no id. Until now such a document failed with `InvalidJsonDbApiUsageException` ("Failed to invoke setter method … due to wrong arguments") for a `Long` id, or was stored under 0 for an `int` id, so the next one failed as a duplicate. If you have an `int`/`long` id document stored under 0, `upsert` of it now inserts a new document instead of updating it; give it another id. Numbers are not a database sequence: when the document with the highest id is removed, that id is handed out again. `String` ids still get a random UUID. (#36)
 
+- Ids for documents saved without one can come from your own `IdGenerator`, set for one class or as the default for all. It gets the collection name and the document, e.g. to build an id from its fields:
+
+  ```java
+  jsonDBTemplate.setIdGenerator(Order.class, (collection, order) -> "ORD-" + ((Order) order).getNumber());
+  jsonDBTemplate.setIdGenerator((collection, document) -> ulids.next());   // every other collection
+  ```
+
+  JsonDB rejects an id that is null, of the wrong type or already in the collection with `InvalidJsonDbApiUsageException`, before anything is saved. The same setters are on `JsonDBConfig`.
+
 ### Bug fixes
 
 - In strict mode (`compatibilityMode` false), `updateCollectionSchema()` could not migrate a collection whose file still had keys the class no longer has: the file failed to load, so the update threw "Collection ... not found. Create collection first", and `createCollection()` refused because the file exists. The update now runs on the file even when the collection did not load, and loads it afterwards. (#84)
