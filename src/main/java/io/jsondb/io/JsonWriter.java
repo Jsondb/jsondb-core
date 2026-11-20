@@ -22,13 +22,16 @@ package io.jsondb.io;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.Charset;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -187,17 +190,25 @@ public class JsonWriter {
         logger.error("Failed to create temporary file for collection {}", collectionName, e);
         return false;
       }
-      FileChannel tChannel;
+      // On the disk a FileOutputStream, whose sync() is a plain fsync. FileChannel.force() is F_FULLFSYNC
+      // on macOS with Java 9 and later, which makes every write several times slower. Other file systems
+      // such as Jimfs only offer the channel.
+      FileOutputStream tFos = null;
+      FileChannel tChannel = null;
       try {
-        tChannel = FileChannel.open(tFile, StandardOpenOption.WRITE);
+        if (tFile.getFileSystem() == FileSystems.getDefault()) {
+          tFos = new FileOutputStream(tFile.toFile());
+        } else {
+          tChannel = FileChannel.open(tFile, StandardOpenOption.WRITE);
+        }
       } catch (IOException e) {
         logger.error("Failed to open temporary collection file {}", tFile.getFileName(), e);
         deleteQuietly(tFile);
         return false;
       }
 
-      try (FileChannel out = tChannel;
-           BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(Channels.newOutputStream(out), charset))) {
+      try (OutputStream out = null != tFos ? tFos : Channels.newOutputStream(tChannel);
+           BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out, charset))) {
         writer.write(objectMapper.writeValueAsString(schemaVersion));
         writer.newLine();
         for (Object document : documents) {
@@ -208,7 +219,11 @@ public class JsonWriter {
         writer.flush();
         // Force the data to disk before the rename makes it the collection file, so that a crash or
         // power loss cannot leave an empty or partly written collection file behind
-        out.force(true);
+        if (null != tFos) {
+          tFos.getFD().sync();
+        } else {
+          tChannel.force(true);
+        }
       } catch (JsonProcessingException e) {
         deleteQuietly(tFile);
         throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
