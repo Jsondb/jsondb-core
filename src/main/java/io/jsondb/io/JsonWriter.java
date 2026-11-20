@@ -68,7 +68,6 @@ public class JsonWriter {
 
   private Logger logger = LoggerFactory.getLogger(JsonWriter.class);
 
-  private Path dbFilesLocation;
   private String collectionName;
   private Path collectionFile;
   private Charset charset;
@@ -88,7 +87,6 @@ public class JsonWriter {
 
   public JsonWriter(JsonDBConfig dbConfig, CollectionMetaData cmd, String collectionName, Path collectionFile) throws IOException {
 
-    this.dbFilesLocation = dbConfig.getDbFilesPath();
     this.collectionName = collectionName;
     this.collectionFile = collectionFile;
     this.charset = dbConfig.getCharset();
@@ -142,7 +140,9 @@ public class JsonWriter {
    */
   private void moveIntoPlace(Path tFile) {
     try {
-      Files.move(tFile, collectionFile, StandardCopyOption.ATOMIC_MOVE);
+      // Whether an atomic move replaces the target is up to the file system: the disk does, Jimfs only
+      // with REPLACE_EXISTING, which the disk ignores for an atomic move
+      Files.move(tFile, collectionFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
       if (syncFolderOnWrite) {
         syncDirectory(collectionFile.toAbsolutePath().getParent());
       }
@@ -241,14 +241,15 @@ public class JsonWriter {
   }
 
   /**
-   * Creates an empty temporary file in the database folder, named like File.createTempFile names it.
+   * Creates an empty temporary file next to the collection file, on the same file system so that it can
+   * be moved over it, and named like File.createTempFile names it.
    * Files.createTempFile is not used because it makes the file readable by its owner only, and the
    * temporary file becomes the collection file.
    */
   private Path createTempFile() throws IOException {
     while (true) {
       long n = ThreadLocalRandom.current().nextLong();
-      Path tFile = dbFilesLocation.resolve(collectionName + Long.toUnsignedString(n) + ".tmp");
+      Path tFile = collectionFile.resolveSibling(collectionName + Long.toUnsignedString(n) + ".tmp");
       try {
         return Files.createFile(tFile);
       } catch (FileAlreadyExistsException e) {

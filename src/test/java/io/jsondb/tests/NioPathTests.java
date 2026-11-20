@@ -28,6 +28,7 @@ import static org.junit.Assume.assumeTrue;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,6 +43,9 @@ import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 
 import io.jsondb.CollectionMetaData;
 import io.jsondb.DefaultSchemaVersionComparator;
@@ -91,7 +95,7 @@ public class NioPathTests {
 
   @Test
   public void readerWithoutLockCreatesNoLockFolder() throws IOException {
-    JsonReader jr = new JsonReader(dbConfig, instancesJson, false);
+    JsonReader jr = new JsonReader(dbConfig, instancesJson.toFile(), false);
     try {
       assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
     } finally {
@@ -116,6 +120,35 @@ public class NioPathTests {
     assertTrue(lines.get(1), lines.get(1).contains("\"hostname\":\"nio\""));
     assertEquals("only the collection file and the lock folder are left", Arrays.asList("instances.json", "lock"),
         listNames(dbFilesPath));
+  }
+
+  @Test
+  public void writerAndReaderWorkOnAnotherFileSystem() throws IOException {
+    try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
+      Path folder = Files.createDirectories(fs.getPath("/db"));
+      Path collectionFile = folder.resolve("instances.json");
+      assertTrue(Util.stampVersion(dbConfig, collectionFile, "1.0"));
+
+      CollectionMetaData cmd = new CollectionMetaData("instances", Instance.class, "1.0", null);
+      Instance instance = new Instance();
+      instance.setId("101");
+      instance.setHostname("jimfs");
+      // The write goes through a FileChannel there, as a FileOutputStream only works on the disk
+      assertTrue(new JsonWriter(dbConfig, cmd, "instances", collectionFile)
+          .reWriteJsonFile(Arrays.asList(instance), false));
+      assertEquals("the temporary file is moved into place", Arrays.asList("instances.json", "lock"),
+          listNames(folder));
+
+      JsonReader jr = new JsonReader(dbConfig, collectionFile);
+      try {
+        assertEquals("{\"schemaVersion\":\"1.0\"}", jr.readLine());
+        assertTrue(jr.readLine().contains("\"hostname\":\"jimfs\""));
+      } finally {
+        jr.close();
+      }
+      assertTrue(Files.isRegularFile(folder.resolve("lock").resolve("instances.json.lock")));
+    }
+    assertFalse("nothing is written to the disk", Files.exists(dbFilesPath.resolve("lock")));
   }
 
   @Test
