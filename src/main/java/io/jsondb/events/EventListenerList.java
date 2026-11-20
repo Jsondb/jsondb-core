@@ -20,7 +20,6 @@
  */
 package io.jsondb.events;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.StandardWatchEventKinds;
@@ -155,8 +154,7 @@ public class EventListenerList {
           }
           @SuppressWarnings("unchecked")
           WatchEvent<Path> ev = (WatchEvent<Path>)event;
-          File file = ev.context().toFile();
-          String fileName = file.getName();
+          String fileName = ev.context().getFileName().toString();
           int extnLocation = fileName.lastIndexOf('.');
           if(extnLocation != -1) {
             String collectionName = fileName.substring(0, extnLocation);
