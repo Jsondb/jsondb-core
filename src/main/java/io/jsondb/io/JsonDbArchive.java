@@ -23,15 +23,18 @@ package io.jsondb.io;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -47,6 +50,10 @@ public final class JsonDbArchive {
   private JsonDbArchive() {
   }
 
+  /**
+   * @deprecated use {@link #resolveBackupZipFile(Path)}
+   */
+  @Deprecated
   public static File resolveBackupZipFile(String backupPath) {
     if (null == backupPath || backupPath.trim().isEmpty()) {
       throw new IllegalArgumentException("Backup path cannot be null or empty");
@@ -61,6 +68,20 @@ public final class JsonDbArchive {
     return path;
   }
 
+  /**
+   * @param backupPath a zip file, a folder to put {@value #DEFAULT_BACKUP_FILENAME} in, or a name to add
+   *     ".zip" to
+   * @return the zip file to back up to
+   * @throws IllegalArgumentException if the path is null or empty
+   */
+  public static Path resolveBackupZipFile(Path backupPath) {
+    return resolveZipFile(backupPath, "Backup");
+  }
+
+  /**
+   * @deprecated use {@link #resolveRestoreZipFile(Path)}
+   */
+  @Deprecated
   public static File resolveRestoreZipFile(String restorePath) {
     if (null == restorePath || restorePath.trim().isEmpty()) {
       throw new IllegalArgumentException("Restore path cannot be null or empty");
@@ -74,64 +95,122 @@ public final class JsonDbArchive {
     return path;
   }
 
+  /**
+   * @param restorePath a zip file, a folder that holds {@value #DEFAULT_BACKUP_FILENAME}, or a name to add
+   *     ".zip" to
+   * @return the zip file to restore from
+   * @throws IllegalArgumentException if the path is null or empty
+   */
+  public static Path resolveRestoreZipFile(Path restorePath) {
+    return resolveZipFile(restorePath, "Restore");
+  }
+
+  private static Path resolveZipFile(Path path, String kind) {
+    if (null == path || path.toString().trim().isEmpty()) {
+      throw new IllegalArgumentException(kind + " path cannot be null or empty");
+    }
+    if (Files.isDirectory(path)) {
+      return path.resolve(DEFAULT_BACKUP_FILENAME);
+    }
+    String name = path.getFileName().toString();
+    if (!name.toLowerCase().endsWith(".zip")) {
+      return path.resolveSibling(name + ".zip");
+    }
+    return path;
+  }
+
+  /**
+   * @deprecated use {@link #listCollectionJsonFiles(Path)}
+   */
+  @Deprecated
   public static List<File> listCollectionJsonFiles(File dbDirectory) {
     List<File> files = new ArrayList<File>();
-    File[] listed = dbDirectory.listFiles();
-    if (null != listed) {
-      for (File file : listed) {
-        if (file.isFile() && file.getName().endsWith(".json")) {
-          files.add(file);
-        }
-      }
+    for (Path file : listCollectionJsonFiles(dbDirectory.toPath())) {
+      files.add(file.toFile());
     }
     return files;
   }
 
-  public static void createBackupZip(File dbDirectory, File zipFile) throws IOException {
-    File parent = zipFile.getParentFile();
-    if (null != parent) {
-      parent.mkdirs();
+  /**
+   * @param dbDirectory the database folder
+   * @return the collection {@code .json} files in it, none if it cannot be listed
+   */
+  public static List<Path> listCollectionJsonFiles(Path dbDirectory) {
+    List<Path> files = new ArrayList<Path>();
+    try (DirectoryStream<Path> listed = Files.newDirectoryStream(dbDirectory)) {
+      for (Path file : listed) {
+        if (Files.isRegularFile(file) && file.getFileName().toString().endsWith(".json")) {
+          files.add(file);
+        }
+      }
+    } catch (IOException e) {
+      // Same as File.listFiles() returning null: nothing to list
     }
-    List<File> collectionFiles = listCollectionJsonFiles(dbDirectory);
-    ZipOutputStream zos = null;
-    try {
-      zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(zipFile)));
-      byte[] buffer = new byte[8192];
-      for (File collectionFile : collectionFiles) {
-        ZipEntry entry = new ZipEntry(collectionFile.getName());
-        zos.putNextEntry(entry);
-        FileInputStream fis = null;
-        try {
-          fis = new FileInputStream(collectionFile);
-          int read = 0;
-          while ((read = fis.read(buffer)) != -1) {
-            zos.write(buffer, 0, read);
-          }
-        } finally {
-          if (null != fis) {
-            fis.close();
-          }
+    return files;
+  }
+
+  /**
+   * @deprecated use {@link #createBackupZip(Path, Path)}
+   */
+  @Deprecated
+  public static void createBackupZip(File dbDirectory, File zipFile) throws IOException {
+    createBackupZip(dbDirectory.toPath(), zipFile.toPath());
+  }
+
+  public static void createBackupZip(Path dbDirectory, Path zipFile) throws IOException {
+    Path parent = zipFile.getParent();
+    if (null != parent) {
+      Files.createDirectories(parent);
+    }
+    List<Path> collectionFiles = listCollectionJsonFiles(dbDirectory);
+    try (ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(Files.newOutputStream(zipFile)))) {
+      for (Path collectionFile : collectionFiles) {
+        zos.putNextEntry(new ZipEntry(collectionFile.getFileName().toString()));
+        try (InputStream in = Files.newInputStream(collectionFile)) {
+          copy(in, zos);
         }
         zos.closeEntry();
       }
-    } finally {
-      if (null != zos) {
-        zos.close();
-      }
     }
   }
 
+  /**
+   * @deprecated use {@link #extractReplaceCollectionFiles(Path, Path)}
+   */
+  @Deprecated
   public static void extractReplaceCollectionFiles(File dbDirectory, File zipFile) throws IOException {
-    deleteCollectionJsonFiles(dbDirectory);
-    extractCollectionFiles(dbDirectory, zipFile);
+    extractReplaceCollectionFiles(dbDirectory.toPath(), zipFile.toPath());
   }
 
+  public static void extractReplaceCollectionFiles(Path dbDirectory, Path zipFile) throws IOException {
+    deleteCollectionJsonFiles(dbDirectory);
+    extractToDirectory(dbDirectory, zipFile);
+  }
+
+  /**
+   * @deprecated use {@link #extractToDirectory(Path, Path)}
+   */
+  @Deprecated
   public static Map<String, File> extractToDirectory(File targetDirectory, File zipFile) throws IOException {
-    targetDirectory.mkdirs();
     Map<String, File> extracted = new LinkedHashMap<String, File>();
-    ZipInputStream zis = null;
-    try {
-      zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)));
+    for (Entry<String, Path> entry : extractToDirectory(targetDirectory.toPath(), zipFile.toPath()).entrySet()) {
+      extracted.put(entry.getKey(), entry.getValue().toFile());
+    }
+    return extracted;
+  }
+
+  /**
+   * Extracts the backup's collection files, skipping entries that are not a plain {@code .json} file name
+   *
+   * @param targetDirectory the folder to extract to, created if it does not exist
+   * @param zipFile the backup
+   * @return the extracted files by collection name
+   * @throws IOException if the backup cannot be read or a file cannot be written
+   */
+  public static Map<String, Path> extractToDirectory(Path targetDirectory, Path zipFile) throws IOException {
+    Files.createDirectories(targetDirectory);
+    Map<String, Path> extracted = new LinkedHashMap<String, Path>();
+    try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(Files.newInputStream(zipFile)))) {
       ZipEntry entry = null;
       while ((entry = zis.getNextEntry()) != null) {
         if (entry.isDirectory()) {
@@ -141,77 +220,43 @@ public final class JsonDbArchive {
         if (!isSafeCollectionEntry(entryName)) {
           continue;
         }
-        File outputFile = new File(targetDirectory, entryName);
-        FileOutputStream fos = null;
-        try {
-          fos = new FileOutputStream(outputFile);
-          byte[] buffer = new byte[8192];
-          int read = 0;
-          while ((read = zis.read(buffer)) != -1) {
-            fos.write(buffer, 0, read);
-          }
-        } finally {
-          if (null != fos) {
-            fos.close();
-          }
+        Path outputFile = targetDirectory.resolve(entryName);
+        try (OutputStream out = Files.newOutputStream(outputFile)) {
+          copy(zis, out);
         }
         String collectionName = entryName.substring(0, entryName.length() - ".json".length());
         extracted.put(collectionName, outputFile);
         zis.closeEntry();
       }
-    } finally {
-      if (null != zis) {
-        zis.close();
-      }
     }
     return extracted;
   }
 
+  /**
+   * @deprecated use {@link #deleteCollectionJsonFiles(Path)}
+   */
+  @Deprecated
   public static void deleteCollectionJsonFiles(File dbDirectory) throws IOException {
-    for (File file : listCollectionJsonFiles(dbDirectory)) {
-      Files.deleteIfExists(file.toPath());
+    deleteCollectionJsonFiles(dbDirectory.toPath());
+  }
+
+  public static void deleteCollectionJsonFiles(Path dbDirectory) throws IOException {
+    for (Path file : listCollectionJsonFiles(dbDirectory)) {
+      Files.deleteIfExists(file);
     }
   }
 
+  /**
+   * @deprecated use {@link #collectionNameFromFile(Path)}
+   */
+  @Deprecated
   public static String collectionNameFromFile(File collectionFile) {
-    String name = collectionFile.getName();
-    return name.substring(0, name.length() - ".json".length());
+    return collectionNameFromFile(collectionFile.toPath());
   }
 
-  private static void extractCollectionFiles(File dbDirectory, File zipFile) throws IOException {
-    ZipInputStream zis = null;
-    try {
-      zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipFile)));
-      ZipEntry entry = null;
-      while ((entry = zis.getNextEntry()) != null) {
-        if (entry.isDirectory()) {
-          continue;
-        }
-        String entryName = entry.getName();
-        if (!isSafeCollectionEntry(entryName)) {
-          continue;
-        }
-        File outputFile = new File(dbDirectory, entryName);
-        FileOutputStream fos = null;
-        try {
-          fos = new FileOutputStream(outputFile);
-          byte[] buffer = new byte[8192];
-          int read = 0;
-          while ((read = zis.read(buffer)) != -1) {
-            fos.write(buffer, 0, read);
-          }
-        } finally {
-          if (null != fos) {
-            fos.close();
-          }
-        }
-        zis.closeEntry();
-      }
-    } finally {
-      if (null != zis) {
-        zis.close();
-      }
-    }
+  public static String collectionNameFromFile(Path collectionFile) {
+    String name = collectionFile.getFileName().toString();
+    return name.substring(0, name.length() - ".json".length());
   }
 
   public static boolean isSafeCollectionEntry(String entryName) {
@@ -221,7 +266,30 @@ public final class JsonDbArchive {
     return entryName.endsWith(".json");
   }
 
+  /**
+   * @deprecated use {@link #copyCollectionFile(Path, Path)}
+   */
+  @Deprecated
   public static void copyCollectionFile(File source, File target) throws IOException {
-    Files.copy(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    copyCollectionFile(source.toPath(), target.toPath());
+  }
+
+  /**
+   * Copies a collection file, also from one file system to another
+   *
+   * @param source the file to copy
+   * @param target the file to create or replace
+   * @throws IOException if the copy fails
+   */
+  public static void copyCollectionFile(Path source, Path target) throws IOException {
+    Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+  }
+
+  private static void copy(InputStream in, OutputStream out) throws IOException {
+    byte[] buffer = new byte[8192];
+    int read = 0;
+    while ((read = in.read(buffer)) != -1) {
+      out.write(buffer, 0, read);
+    }
   }
 }

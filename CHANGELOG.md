@@ -30,7 +30,11 @@
   JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(fs.getPath("/db"), List.of(User.class));
   ```
 
-  `backup()` and `restore()` still need a folder on the default file system, and `JsonDBConfig.getDbFilesLocation()` throws `UnsupportedOperationException` for one elsewhere; use `getDbFilesPath()`. Code that passes a literal `null` as the folder no longer compiles, because the call is ambiguous between the two. (#17)
+  `backup()` and `restore()` take a `Path` too, so a database in memory can be backed up to disk and the other way round. A merging restore of a database that is not on the default file system extracts the backup to a temporary folder inside the database folder instead of the system's temporary folder, and deletes it afterwards. `JsonDBOperations` gains `backup(Path)` and `restore(Path, boolean)`, so a class of your own that implements it must add them. Code that passes a literal `null` as the folder or the backup path no longer compiles, because the call is ambiguous between the `String` and `Path` versions. (#17)
+
+### Deprecations
+
+- The methods that take or return a `java.io.File` have `Path` versions and will be removed in a future release: `JsonDBConfig.getDbFilesLocation()` (use `getDbFilesPath()`; it throws `UnsupportedOperationException` for a folder that is not on the default file system), `Util.delete(File)`, `Util.stampVersion(JsonDBConfig, File, String)`, the `File` constructors of `JsonReader` and `JsonWriter`, and the `File` methods of `JsonDbArchive`, including `resolveBackupZipFile(String)` and `resolveRestoreZipFile(String)`. Unlike `Util.delete(File)`, `Util.delete(Path)` deletes a symbolic link inside the folder instead of the contents of the folder it points to. (#17)
 
 ### Bug fixes
 
