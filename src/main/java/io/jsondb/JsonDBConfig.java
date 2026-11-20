@@ -47,7 +47,6 @@ public class JsonDBConfig {
   //Settings
   private Charset charset;
   private String dbFilesLocationString;
-  private File dbFilesLocation;
   private Path dbFilesPath;
   private String baseScanPackage;
   private Collection<Class<?>> entityClasses;
@@ -64,11 +63,26 @@ public class JsonDBConfig {
 
   public JsonDBConfig(String dbFilesLocationString, String baseScanPackage,
       ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(new File(dbFilesLocationString).toPath(), baseScanPackage, cipher, compatibilityMode, schemaComparator);
+    this.dbFilesLocationString = dbFilesLocationString;
+  }
+
+  /**
+   * Same as {@link #JsonDBConfig(String, String, ICipher, boolean, Comparator)} for a folder given as a
+   * Path, which can be on any file system, not only the default one
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param baseScanPackage the package to scan for classes annotated with {@link io.jsondb.annotation.Document}
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   * @param compatibilityMode if true unknown properties in the .json files are ignored
+   * @param schemaComparator comparator for schema versions, or null for the default
+   */
+  public JsonDBConfig(Path dbFilesPath, String baseScanPackage,
+      ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
 
     this.charset = Charset.forName("UTF-8");
-    this.dbFilesLocationString = dbFilesLocationString;
-    this.dbFilesLocation = new File(dbFilesLocationString);
-    this.dbFilesPath = dbFilesLocation.toPath();
+    this.dbFilesLocationString = dbFilesPath.toString();
+    this.dbFilesPath = dbFilesPath;
     this.baseScanPackage = baseScanPackage;
     this.cipher = cipher;
 
@@ -102,7 +116,23 @@ public class JsonDBConfig {
    */
   public JsonDBConfig(String dbFilesLocationString, Collection<Class<?>> entityClasses,
       ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
-    this(dbFilesLocationString, (String) null, cipher, compatibilityMode, schemaComparator);
+    this(new File(dbFilesLocationString).toPath(), entityClasses, cipher, compatibilityMode, schemaComparator);
+    this.dbFilesLocationString = dbFilesLocationString;
+  }
+
+  /**
+   * Same as {@link #JsonDBConfig(String, Collection, ICipher, boolean, Comparator)} for a folder given as a
+   * Path, which can be on any file system, not only the default one
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   * @param compatibilityMode if true unknown properties in the .json files are ignored
+   * @param schemaComparator comparator for schema versions, or null for the default
+   */
+  public JsonDBConfig(Path dbFilesPath, Collection<Class<?>> entityClasses,
+      ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(dbFilesPath, (String) null, cipher, compatibilityMode, schemaComparator);
     if (null == entityClasses) {
       throw new InvalidJsonDbApiUsageException("Entity classes cannot be null");
     }
@@ -120,11 +150,15 @@ public class JsonDBConfig {
   }
   public void setDbFilesLocationString(String dbFilesLocationString) {
     this.dbFilesLocationString = dbFilesLocationString;
-    this.dbFilesLocation = new File(dbFilesLocationString);
-    this.dbFilesPath = dbFilesLocation.toPath();
+    this.dbFilesPath = new File(dbFilesLocationString).toPath();
   }
+  /**
+   * @return the database folder as a File
+   * @throws UnsupportedOperationException if the folder is not on the default file system, use
+   *     {@link #getDbFilesPath()} instead
+   */
   public File getDbFilesLocation() {
-    return dbFilesLocation;
+    return dbFilesPath.toFile();
   }
   public Path getDbFilesPath() {
     return dbFilesPath;
