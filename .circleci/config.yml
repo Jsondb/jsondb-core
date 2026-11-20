@@ -21,14 +21,16 @@ jobs:
             - gradle-
       - run:
           name: Install Java 8 for testOnJava8
-          # Pinned and checked against Adoptium's published checksum. Gradle's own toolchain download
-          # keeps a damaged download in ~/.gradle/jdks and fails on it again in every retry.
+          # Zulu 8 from Azul's CDN, pinned and checked against Azul's published checksum. Gradle's own
+          # toolchain download gets Temurin from GitHub, which sends CircleCI an XML error instead of the
+          # file, and Gradle keeps the bad download in ~/.gradle/jdks and fails on it again in every retry.
           command: |
             for attempt in 1 2 3; do
-              curl -sSL --retry 5 --retry-all-errors -o jdk8.tar.gz https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u514-b01/OpenJDK8U-jdk_x64_linux_hotspot_8u514b01.tar.gz \
-                && echo "27eda854481d20806d918b30cdd417c6bed4fd15882e24f3595dc8ae7fb5d095  jdk8.tar.gz" | sha256sum -c - \
+              status=$(curl -sSL --retry 5 --retry-all-errors -o jdk8.tar.gz -w '%{http_code}' https://cdn.azul.com/zulu/bin/zulu8.98.0.201-ca-jdk8.0.514-linux_x64.tar.gz) \
+                && echo "16a4c55c3061ee41e94edb109f5aea1c55a2952d37e25e215d478b8347350860  jdk8.tar.gz" | sha256sum -c - \
                 && break
-              echo "Java 8 download attempt ${attempt} failed, got $(stat -c %s jdk8.tar.gz 2>/dev/null) bytes of $(file -b jdk8.tar.gz 2>/dev/null)"
+              echo "Java 8 download attempt ${attempt} failed: HTTP ${status}, $(stat -c %s jdk8.tar.gz 2>/dev/null) bytes of $(file -b jdk8.tar.gz 2>/dev/null)"
+              if file -b jdk8.tar.gz | grep -q text; then head -c 2000 jdk8.tar.gz; echo; fi
               rm -f jdk8.tar.gz
               [ "${attempt}" = 3 ] && exit 1
               sleep 30
