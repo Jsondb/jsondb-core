@@ -21,12 +21,14 @@
 package io.jsondb;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.CharacterCodingException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -90,11 +92,11 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   private JsonDBConfig dbConfig = null;
   private final boolean encrypted;
   private final boolean readOnly;
-  private File lockFilesLocation;
+  private Path lockFilesLocation;
   private EventListenerList eventListenerList;
 
   private Map<String, CollectionMetaData> cmdMap;
-  private AtomicReference<Map<String, File>> fileObjectsRef = new AtomicReference<Map<String, File>>(new ConcurrentHashMap<String, File>());
+  private AtomicReference<Map<String, Path>> fileObjectsRef = new AtomicReference<Map<String, Path>>(new ConcurrentHashMap<String, Path>());
   private AtomicReference<Map<String, Map<Object, ?>>> collectionsRef = new AtomicReference<Map<String, Map<Object, ?>>>(new ConcurrentHashMap<String, Map<Object, ?>>());
   private AtomicReference<Map<String, JXPathContext>> contextsRef = new AtomicReference<Map<String, JXPathContext>>(new ConcurrentHashMap<String, JXPathContext>());
 
@@ -340,30 +342,33 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   }
 
   private void initialize(){
-    File dbFilesLocation = dbConfig.getDbFilesLocation();
-    if (dbFilesLocation.isFile()) {
+    Path dbFilesLocation = dbConfig.getDbFilesPath();
+    if (Files.isRegularFile(dbFilesLocation)) {
       throw new InvalidJsonDbApiUsageException("Specified DbFiles directory is actually a file cannot use it as a directory");
     }
     if (readOnly) {
       // Nothing is created in a read-only database, not even the lock folder
-      if (!dbFilesLocation.isDirectory()) {
+      if (!Files.isDirectory(dbFilesLocation)) {
         throw new InvalidJsonDbApiUsageException("Cannot open the database read-only, the DbFiles directory "
             + dbConfig.getDbFilesLocationString() + " does not exist");
       }
-    } else if (!dbFilesLocation.exists()) {
+    } else if (!Files.exists(dbFilesLocation)) {
       try {
         Files.createDirectories(dbConfig.getDbFilesPath());
       } catch (IOException e) {
         throw new InvalidJsonDbApiUsageException("DbFiles directory does not exist. Failed to create a new empty DBFiles directory " + dbConfig.getDbFilesLocationString(), e);
       }
     }
-    this.lockFilesLocation = new File(dbFilesLocation, "lock");
+    this.lockFilesLocation = dbFilesLocation.resolve("lock");
     if (!readOnly) {
-      if(!lockFilesLocation.exists()) {
-        lockFilesLocation.mkdirs();
+      try {
+        Files.createDirectories(lockFilesLocation);
+      } catch (IOException e) {
+        // Reported as not writable just below
+        logger.debug("Failed to create the lock folder {}", lockFilesLocation, e);
       }
       // Every read and write takes a lock file in this folder, so without it no collection would load
-      if (!lockFilesLocation.isDirectory() || !Files.isWritable(lockFilesLocation.toPath())) {
+      if (!Files.isDirectory(lockFilesLocation) || !Files.isWritable(lockFilesLocation)) {
         throw new InvalidJsonDbApiUsageException("Cannot open the database in " + dbConfig.getDbFilesLocationString()
             + ": the lock folder " + lockFilesLocation + " is not writable. JsonDB needs write access to the database folder,"
             + " or open it read-only with JsonDBConfig.setReadOnly(true).");
@@ -386,8 +391,8 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
 
   private synchronized void loadDB() {
     for(String collectionName : cmdMap.keySet()) {
-      File collectionFile = new File(dbConfig.getDbFilesLocation(), collectionName + ".json");
-      if(collectionFile.exists()) {
+      Path collectionFile = dbConfig.getDbFilesPath().resolve(collectionName + ".json");
+      if(Files.exists(collectionFile)) {
         reloadCollection(collectionName);
       } else if (collectionsRef.get().containsKey(collectionName)){
         //this probably is a reload attempt after a collection .json was deleted.
@@ -405,15 +410,15 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     CollectionMetaData cmd = metaDataFor(collectionName);
     cmd.getCollectionLock().writeLock().lock();
     try {
-      File collectionFile = fileObjectsRef.get().get(collectionName);
+      Path collectionFile = fileObjectsRef.get().get(collectionName);
       if(null == collectionFile) {
         // Lets create a file now
-        collectionFile = new File(dbConfig.getDbFilesLocation(), collectionName + ".json");
-        if(!collectionFile.exists()) {
-          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' cannot be found at " + collectionFile.getAbsolutePath());
+        collectionFile = dbConfig.getDbFilesPath().resolve(collectionName + ".json");
+        if(!Files.exists(collectionFile)) {
+          throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' cannot be found at " + collectionFile.toAbsolutePath());
         }
-        Map<String, File> fileObjectMap = fileObjectsRef.get();
-        Map<String, File> newFileObjectmap = new ConcurrentHashMap<String, File>(fileObjectMap);
+        Map<String, Path> fileObjectMap = fileObjectsRef.get();
+        Map<String, Path> newFileObjectmap = new ConcurrentHashMap<String, Path>(fileObjectMap);
         newFileObjectmap.put(collectionName, collectionFile);
         fileObjectsRef.set(newFileObjectmap);
       }
@@ -445,7 +450,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     return context;
   }
 
-  private <T> Map<Object, T> loadCollection(File collectionFile, String collectionName, CollectionMetaData cmd) {
+  private <T> Map<Object, T> loadCollection(Path collectionFile, String collectionName, CollectionMetaData cmd) {
     @SuppressWarnings("unchecked")
     Class<T> entity = cmd.getClazz();
     Method getterMethodForId = cmd.getIdAnnotatedFieldGetterMethod();
@@ -470,27 +475,27 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         lineNo++;
       }
     } catch (JsonParseException je) {
-      logger.error("Failed Json Parsing for file {} line {}", collectionFile.getName(), lineNo, je);
+      logger.error("Failed Json Parsing for file {} line {}", collectionFile.getFileName(), lineNo, je);
       return null;
     } catch (JsonMappingException jm) {
       logger.error("Failed Mapping Parsed Json to Entity {} for file {} line {}",
-          entity.getSimpleName(), collectionFile.getName(), lineNo, jm);
+          entity.getSimpleName(), collectionFile.getFileName(), lineNo, jm);
       return null;
     } catch (CharacterCodingException ce) {
       logger.error("Unsupported Character Encoding in file {} expected Encoding {}",
-          collectionFile.getName(), dbConfig.getCharset().displayName(), ce);
+          collectionFile.getFileName(), dbConfig.getCharset().displayName(), ce);
       return null;
     } catch (JsonFileLockException jfe) {
-      logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), jfe);
+      logger.error("Failed to acquire lock for collection file {}", collectionFile.getFileName(), jfe);
       return null;
-    } catch (FileNotFoundException fe) {
-      logger.error("Collection file {} not found", collectionFile.getName(), fe);
+    } catch (NoSuchFileException fe) {
+      logger.error("Collection file {} not found", collectionFile.getFileName(), fe);
       return null;
     } catch (IOException e) {
-      logger.error("Some IO Exception reading the Json File {}", collectionFile.getName(), e);
+      logger.error("Some IO Exception reading the Json File {}", collectionFile.getFileName(), e);
       return null;
     } catch(Throwable t) {
-      logger.error("Throwable Caught {}, {} ", collectionFile.getName(), t);
+      logger.error("Throwable Caught {}, {} ", collectionFile.getFileName(), t);
       return null;
     } finally {
       if (null != jr) {
@@ -557,17 +562,20 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
 
       String collectionFileName = collectionName + ".json";
-      File fileObject = new File(dbConfig.getDbFilesLocation(), collectionFileName);
+      Path fileObject = dbConfig.getDbFilesPath().resolve(collectionFileName);
       boolean fileCreated;
       try {
-        fileCreated = fileObject.createNewFile();
+        Files.createFile(fileObject);
+        fileCreated = true;
+      } catch (FileAlreadyExistsException e) {
+        fileCreated = false;
       } catch (IOException e) {
         throw new InvalidJsonDbApiUsageException("Unable to create a collection file for collection: " + collectionName, e);
       }
       if (!fileCreated) {
         // The file exists but the collection is not loaded, typically because the file failed to parse.
         // Stamping a version on it would truncate it and destroy the user's data.
-        throw new InvalidJsonDbApiUsageException("Collection file " + fileObject.getAbsolutePath()
+        throw new InvalidJsonDbApiUsageException("Collection file " + fileObject.toAbsolutePath()
             + " already exists but is not loaded, it may be corrupt. Repair or remove it, then call reloadCollection(\""
             + collectionName + "\")");
       }
@@ -579,7 +587,11 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         fileObjectsRef.get().put(collectionName, fileObject);
         cmd.setActualSchemaVersion(cmd.getSchemaVersion());
       } else {
-        fileObject.delete();
+        try {
+          Files.deleteIfExists(fileObject);
+        } catch (IOException e) {
+          logger.error("Failed to delete the new collection file {}", fileObject, e);
+        }
         throw new JsonDBException("Failed to stamp version for collection: " + collectionName);
       }
     } finally {
@@ -607,9 +619,9 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
     cmd.getCollectionLock().writeLock().lock();
     try {
-      File toDelete = fileObjectsRef.get().get(collectionName);
+      Path toDelete = fileObjectsRef.get().get(collectionName);
       try {
-        Files.deleteIfExists(toDelete.toPath());
+        Files.deleteIfExists(toDelete);
       } catch (IOException e) {
         throw new InvalidJsonDbApiUsageException("Unable to delete the collection file for collection: " + collectionName, e);
       }
@@ -640,8 +652,8 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     CollectionMetaData cmd = cmdMap.get(collectionName);
     // The update works on the file, so it also migrates a collection that did not load, e.g. in
     // strict mode because the file still has keys the class no longer has (#84)
-    File collectionFile = new File(dbConfig.getDbFilesLocation(), collectionName + ".json");
-    if((null == cmd) || (!collectionsRef.get().containsKey(collectionName) && !collectionFile.isFile())) {
+    Path collectionFile = dbConfig.getDbFilesPath().resolve(collectionName + ".json");
+    if((null == cmd) || (!collectionsRef.get().containsKey(collectionName) && !Files.isRegularFile(collectionFile))) {
       throw new InvalidJsonDbApiUsageException("Collection by name '" + collectionName + "' not found. Create collection first.");
     }
     if (null == update) {
@@ -716,7 +728,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
           }
           JsonNode node = objectMapper.readTree(line);
           if (!(node instanceof ObjectNode)) {
-            throw new JsonDBException("Line " + lineNo + " of collection file " + collectionFile.getName() + " is not a JSON object");
+            throw new JsonDBException("Line " + lineNo + " of collection file " + collectionFile.getFileName() + " is not a JSON object");
           }
           ObjectNode document = (ObjectNode) node;
           // Take every renamed value out before setting any, so swaps and chains do not overwrite each other

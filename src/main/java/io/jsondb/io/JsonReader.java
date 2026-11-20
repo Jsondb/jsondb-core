@@ -22,15 +22,17 @@ package io.jsondb.io;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,18 +50,25 @@ public class JsonReader {
 
   private Logger logger = LoggerFactory.getLogger(JsonReader.class);
 
-  private File collectionFile;
+  private Path collectionFile;
 
-  private RandomAccessFile raf;
-  private FileInputStream fis;
+  private InputStream fis;
   private FileChannel channel;
   private InputStreamReader isr;
   private BufferedReader reader;
   private FileLock lock;
-  private File lockFilesLocation;
-  private File fileLockLocation;
+  private Path lockFilesLocation;
+  private Path fileLockLocation;
 
   public JsonReader(JsonDBConfig dbConfig, File collectionFile) throws IOException {
+    this(dbConfig, collectionFile.toPath(), true);
+  }
+
+  public JsonReader(JsonDBConfig dbConfig, File collectionFile, boolean takeLock) throws IOException {
+    this(dbConfig, collectionFile.toPath(), takeLock);
+  }
+
+  public JsonReader(JsonDBConfig dbConfig, Path collectionFile) throws IOException {
     this(dbConfig, collectionFile, true);
   }
 
@@ -67,52 +76,43 @@ public class JsonReader {
    * @param takeLock false to read without a lock file, for a database opened read-only. Only safe
    *     because writers move a complete new file into place, so a reader sees the old file or the new one.
    */
-  public JsonReader(JsonDBConfig dbConfig, File collectionFile, boolean takeLock) throws IOException {
+  public JsonReader(JsonDBConfig dbConfig, Path collectionFile, boolean takeLock) throws IOException {
     this.collectionFile = collectionFile;
     CharsetDecoder decoder = dbConfig.getCharset().newDecoder();
     decoder.onMalformedInput(CodingErrorAction.REPORT);
     decoder.onUnmappableCharacter(CodingErrorAction.REPORT);
     if (!takeLock) {
-      fis = new FileInputStream(collectionFile);
+      fis = Files.newInputStream(collectionFile);
       isr = new InputStreamReader(fis, decoder);
       reader = new BufferedReader(isr);
       return;
     }
 
-    this.lockFilesLocation = new File(collectionFile.getParentFile(), "lock");
-    this.fileLockLocation = new File(lockFilesLocation, collectionFile.getName() + ".lock");
-    
-    if(!lockFilesLocation.exists()) {
-      lockFilesLocation.mkdirs();
-    }
-    if(!fileLockLocation.exists()) {
-      fileLockLocation.createNewFile();
-    }
+    this.lockFilesLocation = collectionFile.resolveSibling("lock");
+    this.fileLockLocation = lockFilesLocation.resolve(collectionFile.getFileName() + ".lock");
 
-    raf = new RandomAccessFile(fileLockLocation, "rw");
-    channel = raf.getChannel();
+    Files.createDirectories(lockFilesLocation);
+    channel = FileChannel.open(fileLockLocation, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
     try {
       lock = channel.lock();
     } catch (IOException | OverlappingFileLockException e) {
       try {
         channel.close();
-        raf.close();
       } catch (IOException e1) {
-        logger.error("Failed while closing RandomAccessFile for collection file {}", collectionFile.getName());
+        logger.error("Failed while closing lock file channel for collection file {}", collectionFile.getFileName());
       }
       throw new JsonFileLockException("JsonReader failed to obtain a file lock for file " + fileLockLocation, e);
     }
 
     try {
-      fis = new FileInputStream(collectionFile);
+      fis = Files.newInputStream(collectionFile);
     } catch (IOException e) {
       // Release the file lock, otherwise every later reader and writer of this collection in the JVM fails
       try {
         lock.release();
         channel.close();
-        raf.close();
       } catch (IOException e1) {
-        logger.error("Failed to release lock for collection file {}", collectionFile.getName(), e1);
+        logger.error("Failed to release lock for collection file {}", collectionFile.getFileName(), e1);
       }
       throw e;
     }
@@ -135,20 +135,20 @@ public class JsonReader {
     try {
       reader.close();
     } catch (IOException e) {
-      logger.error("Failed to close BufferedReader for collection file {}", collectionFile.getName(), e);
+      logger.error("Failed to close BufferedReader for collection file {}", collectionFile.getFileName(), e);
     }
     try {
       isr.close();
     } catch (IOException e) {
-      logger.error("Failed to close InputStreamReader for collection file {}", collectionFile.getName(), e);
+      logger.error("Failed to close InputStreamReader for collection file {}", collectionFile.getFileName(), e);
+    }
+    try {
+      fis.close();
+    } catch (IOException e) {
+      logger.error("Failed to close InputStream for collection file {}", collectionFile.getFileName(), e);
     }
     if (lock == null) {
-      // Read without a lock file, so there is no lock, channel or RandomAccessFile to close
-      try {
-        fis.close();
-      } catch (IOException e) {
-        logger.error("Failed to close FileInputStream for collection file {}", collectionFile.getName(), e);
-      }
+      // Read without a lock file, so there is no lock or channel to close
       return;
     }
     try {
@@ -156,22 +156,12 @@ public class JsonReader {
         lock.release();
       }
     } catch (IOException e) {
-      logger.error("Failed to release lock for collection file {}", collectionFile.getName(), e);
+      logger.error("Failed to release lock for collection file {}", collectionFile.getFileName(), e);
     }
     try {
       channel.close();
     } catch (IOException e) {
-      logger.error("Failed to close FileChannel for collection file {}", collectionFile.getName(), e);
+      logger.error("Failed to close FileChannel for collection file {}", collectionFile.getFileName(), e);
     }
-    try {
-      fis.close();
-    } catch (IOException e) {
-      logger.error("Failed to close FileInputStream for collection file {}", collectionFile.getName(), e);
-    }
-    try {
-      raf.close();
-    } catch (IOException e) {
-      logger.error("Failed to close RandomAccessFile for collection file {}", collectionFile.getName(), e);
-    }    
   }
 }

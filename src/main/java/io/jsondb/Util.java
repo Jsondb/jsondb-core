@@ -26,11 +26,13 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.*;
 
@@ -209,12 +211,26 @@ public class Util {
    * @return true if success.
    */
   public static boolean stampVersion(JsonDBConfig dbConfig, File f, String version) {
+    return stampVersion(dbConfig, f.toPath(), version);
+  }
 
-    FileOutputStream fos = null;
+  /**
+   * Utility to stamp the version into a newly created .json File
+   * This method is expected to be invoked on a newly created .json file before it is usable.
+   * So no locking code required.
+   *
+   * @param dbConfig  all the settings used by Json DB
+   * @param f  the target .json file on which to stamp the version
+   * @param version  the actual version string to stamp
+   * @return true if success.
+   */
+  public static boolean stampVersion(JsonDBConfig dbConfig, Path f, String version) {
+
+    OutputStream fos = null;
     OutputStreamWriter osr = null;
     BufferedWriter writer = null;
     try {
-      fos = new FileOutputStream(f);
+      fos = Files.newOutputStream(f);
       osr = new OutputStreamWriter(fos, dbConfig.getCharset());
       writer = new BufferedWriter(osr);
 
@@ -246,7 +262,7 @@ public class Util {
         try {
           fos.close();
         } catch (IOException e) {
-          logger.error("Failed to close FileOutputStream for new collection file {}", f, e);
+          logger.error("Failed to close OutputStream for new collection file {}", f, e);
         }
       }
     }

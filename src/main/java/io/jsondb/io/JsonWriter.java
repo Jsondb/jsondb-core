@@ -22,14 +22,15 @@ package io.jsondb.io;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.RandomAccessFile;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.charset.Charset;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.UnaryOperator;
 
 import org.slf4j.Logger;
@@ -63,24 +65,27 @@ public class JsonWriter {
 
   private Logger logger = LoggerFactory.getLogger(JsonWriter.class);
 
-  private File dbFilesLocation;
+  private Path dbFilesLocation;
   private String collectionName;
-  private File collectionFile;
+  private Path collectionFile;
   private Charset charset;
   private ObjectMapper objectMapper;
   private SchemaVersion schemaVersion;
   private CollectionMetaData cmd;
   private boolean syncFolderOnWrite;
 
-  private File lockFilesLocation;
-  private File fileLockLocation;
+  private Path lockFilesLocation;
+  private Path fileLockLocation;
   
-  private RandomAccessFile raf;
   private FileChannel channel;
 
   public JsonWriter(JsonDBConfig dbConfig, CollectionMetaData cmd, String collectionName, File collectionFile) throws IOException {
+    this(dbConfig, cmd, collectionName, collectionFile.toPath());
+  }
 
-    this.dbFilesLocation = dbConfig.getDbFilesLocation();
+  public JsonWriter(JsonDBConfig dbConfig, CollectionMetaData cmd, String collectionName, Path collectionFile) throws IOException {
+
+    this.dbFilesLocation = dbConfig.getDbFilesPath();
     this.collectionName = collectionName;
     this.collectionFile = collectionFile;
     this.charset = dbConfig.getCharset();
@@ -89,18 +94,11 @@ public class JsonWriter {
     this.cmd = cmd;
     this.syncFolderOnWrite = dbConfig.isSyncFolderOnWrite();
     
-    this.lockFilesLocation = new File(collectionFile.getParentFile(), "lock");
-    this.fileLockLocation = new File(lockFilesLocation, collectionFile.getName() + ".lock");
+    this.lockFilesLocation = collectionFile.resolveSibling("lock");
+    this.fileLockLocation = lockFilesLocation.resolve(collectionFile.getFileName() + ".lock");
     
-    if(!lockFilesLocation.exists()) {
-      lockFilesLocation.mkdirs();
-    }
-    if(!fileLockLocation.exists()) {
-      fileLockLocation.createNewFile();
-    }
-    
-    raf = new RandomAccessFile(fileLockLocation, "rw");
-    channel = raf.getChannel();
+    Files.createDirectories(lockFilesLocation);
+    channel = FileChannel.open(fileLockLocation, StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE);
   }
   
   private FileLock acquireLock() throws IOException {
@@ -110,9 +108,8 @@ public class JsonWriter {
     } catch (IOException e) {
       try {
         channel.close();
-        raf.close();
       } catch (IOException e1) {
-        logger.error("Failed while closing RandomAccessFile for collection file {}", collectionFile.getName());
+        logger.error("Failed while closing lock file channel for collection file {}", collectionFile.getFileName());
       }
       throw e;
     }
@@ -124,17 +121,12 @@ public class JsonWriter {
         lock.release();
       }
     } catch (IOException e) {
-      logger.error("Failed to release lock for collection file {}", collectionFile.getName(), e);
+      logger.error("Failed to release lock for collection file {}", collectionFile.getFileName(), e);
     }
     try {
       channel.close();
     } catch (IOException e) {
-      logger.error("Failed to close FileChannel for collection file {}", collectionFile.getName(), e);
-    }
-    try {
-      raf.close();
-    } catch (IOException e) {
-      logger.error("Failed to close RandomAccessFile for collection file {}", collectionFile.getName(), e);
+      logger.error("Failed to close FileChannel for collection file {}", collectionFile.getFileName(), e);
     }
   }
 
@@ -145,21 +137,21 @@ public class JsonWriter {
    * change in memory either. The temporary file is deleted and a JsonDBException is thrown
    * rather than reporting success (issue #15).
    */
-  private void moveIntoPlace(File tFile) {
+  private void moveIntoPlace(Path tFile) {
     try {
-      Files.move(tFile.toPath(), collectionFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
+      Files.move(tFile, collectionFile, StandardCopyOption.ATOMIC_MOVE);
       if (syncFolderOnWrite) {
-        syncDirectory(collectionFile.getParentFile());
+        syncDirectory(collectionFile.toAbsolutePath().getParent());
       }
     } catch (IOException e) {
-      logger.error("Failed to move temporary collection file {} to collection file {}", tFile.getName(), collectionFile.getName(), e);
+      logger.error("Failed to move temporary collection file {} to collection file {}", tFile.getFileName(), collectionFile.getFileName(), e);
       try {
-        Files.deleteIfExists(tFile.toPath());
+        Files.deleteIfExists(tFile);
       } catch (IOException de) {
-        logger.error("Failed to delete temporary collection file {}", tFile.getName(), de);
+        logger.error("Failed to delete temporary collection file {}", tFile.getFileName(), de);
       }
       throw new JsonDBException("Failed to save collection " + collectionName
-          + ", could not replace collection file " + collectionFile.getAbsolutePath(), e);
+          + ", could not replace collection file " + collectionFile.toAbsolutePath(), e);
     }
   }
 
@@ -184,20 +176,28 @@ public class JsonWriter {
       try {
         lock = acquireLock();
       } catch (IOException e) {
-        logger.error("Failed to acquire lock for collection file {}", collectionFile.getName(), e);
+        logger.error("Failed to acquire lock for collection file {}", collectionFile.getFileName(), e);
         return false;
       }
 
-      File tFile;
+      Path tFile;
       try {
-        tFile = File.createTempFile(collectionName, null, dbFilesLocation);
+        tFile = createTempFile();
       } catch (IOException e) {
         logger.error("Failed to create temporary file for collection {}", collectionName, e);
         return false;
       }
+      FileChannel tChannel;
+      try {
+        tChannel = FileChannel.open(tFile, StandardOpenOption.WRITE);
+      } catch (IOException e) {
+        logger.error("Failed to open temporary collection file {}", tFile.getFileName(), e);
+        deleteQuietly(tFile);
+        return false;
+      }
 
-      try (FileOutputStream fos = new FileOutputStream(tFile);
-           BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fos, charset))) {
+      try (FileChannel out = tChannel;
+           BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(Channels.newOutputStream(out), charset))) {
         writer.write(objectMapper.writeValueAsString(schemaVersion));
         writer.newLine();
         for (Object document : documents) {
@@ -208,12 +208,12 @@ public class JsonWriter {
         writer.flush();
         // Force the data to disk before the rename makes it the collection file, so that a crash or
         // power loss cannot leave an empty or partly written collection file behind
-        fos.getFD().sync();
+        out.force(true);
       } catch (JsonProcessingException e) {
         deleteQuietly(tFile);
         throw new InvalidJsonDbApiUsageException("Failed Json Processing for collection " + collectionName, e);
       } catch (IOException e) {
-        logger.error("Failed to write temporary collection file {}", tFile.getName(), e);
+        logger.error("Failed to write temporary collection file {}", tFile.getFileName(), e);
         deleteQuietly(tFile);
         return false;
       }
@@ -226,23 +226,40 @@ public class JsonWriter {
   }
 
   /**
+   * Creates an empty temporary file in the database folder, named like File.createTempFile names it.
+   * Files.createTempFile is not used because it makes the file readable by its owner only, and the
+   * temporary file becomes the collection file.
+   */
+  private Path createTempFile() throws IOException {
+    while (true) {
+      long n = ThreadLocalRandom.current().nextLong();
+      Path tFile = dbFilesLocation.resolve(collectionName + Long.toUnsignedString(n) + ".tmp");
+      try {
+        return Files.createFile(tFile);
+      } catch (FileAlreadyExistsException e) {
+        // Taken by another temporary file, try another name
+      }
+    }
+  }
+
+  /**
    * Forces the folder's entries, and so the rename that replaced the collection file, to disk; see
    * JsonDBConfig#setSyncFolderOnWrite. Opening a folder this way is not supported everywhere (e.g.
    * Windows); the rename is still atomic there, just not yet forced to disk.
    */
-  private void syncDirectory(File directory) {
-    try (FileChannel folder = FileChannel.open(directory.toPath(), StandardOpenOption.READ)) {
+  private void syncDirectory(Path directory) {
+    try (FileChannel folder = FileChannel.open(directory, StandardOpenOption.READ)) {
       folder.force(true);
     } catch (IOException | UnsupportedOperationException e) {
-      logger.debug("Could not force folder {} to disk after replacing collection file {}", directory, collectionFile.getName(), e);
+      logger.debug("Could not force folder {} to disk after replacing collection file {}", directory, collectionFile.getFileName(), e);
     }
   }
 
-  private void deleteQuietly(File file) {
+  private void deleteQuietly(Path file) {
     try {
-      Files.deleteIfExists(file.toPath());
+      Files.deleteIfExists(file);
     } catch (IOException e) {
-      logger.error("Failed to delete temporary collection file {}", file.getName(), e);
+      logger.error("Failed to delete temporary collection file {}", file.getFileName(), e);
     }
   }
 
