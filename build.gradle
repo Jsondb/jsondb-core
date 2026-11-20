@@ -48,7 +48,7 @@ version = getVersionName()
 ext {
     println "Build Version: $version"
 
-    slf4jVersion = '1.7.36'
+    slf4jVersion = '2.0.20'
     jacksonVersion = '2.23.0'
     guavaVersion = '33.8.0-jre'
     jxpathVersion = '1.4.0'
