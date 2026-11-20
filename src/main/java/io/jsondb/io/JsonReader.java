@@ -60,10 +60,18 @@ public class JsonReader {
   private Path lockFilesLocation;
   private Path fileLockLocation;
 
+  /**
+   * @deprecated use {@link #JsonReader(JsonDBConfig, Path)}
+   */
+  @Deprecated
   public JsonReader(JsonDBConfig dbConfig, File collectionFile) throws IOException {
     this(dbConfig, collectionFile.toPath(), true);
   }
 
+  /**
+   * @deprecated use {@link #JsonReader(JsonDBConfig, Path, boolean)}
+   */
+  @Deprecated
   public JsonReader(JsonDBConfig dbConfig, File collectionFile, boolean takeLock) throws IOException {
     this(dbConfig, collectionFile.toPath(), takeLock);
   }

@@ -20,12 +20,12 @@
  */
 package io.jsondb;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.CharacterCodingException;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
@@ -1963,20 +1963,39 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    * @see org.jsondb.JsonDBOperations#backup(java.lang.String)
    */
   @Override
+  @SuppressWarnings("deprecation")
   public void backup(String backupPath) {
-    File zipFile;
+    Path zipFile;
+    try {
+      // The String version keeps resolving the name exactly as before
+      zipFile = JsonDbArchive.resolveBackupZipFile(backupPath).toPath();
+    } catch (IllegalArgumentException e) {
+      throw new InvalidJsonDbApiUsageException(e.getMessage());
+    }
+    backupTo(zipFile);
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#backup(java.nio.file.Path)
+   */
+  @Override
+  public void backup(Path backupPath) {
+    Path zipFile;
     try {
       zipFile = JsonDbArchive.resolveBackupZipFile(backupPath);
     } catch (IllegalArgumentException e) {
       throw new InvalidJsonDbApiUsageException(e.getMessage());
     }
-    File dbDirectory = dbConfig.getDbFilesLocation();
+    backupTo(zipFile);
+  }
+
+  private void backupTo(Path zipFile) {
     lockAllCollectionsWrite();
     try {
-      JsonDbArchive.createBackupZip(dbDirectory, zipFile);
-      logger.debug("Created JsonDB backup at {}", zipFile.getAbsolutePath());
+      JsonDbArchive.createBackupZip(dbConfig.getDbFilesPath(), zipFile);
+      logger.debug("Created JsonDB backup at {}", zipFile.toAbsolutePath());
     } catch (IOException e) {
-      throw new JsonDBException("Failed to create JsonDB backup at " + zipFile.getAbsolutePath(), e);
+      throw new JsonDBException("Failed to create JsonDB backup at " + zipFile.toAbsolutePath(), e);
     } finally {
       unlockAllCollectionsWrite();
     }
@@ -1986,16 +2005,37 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    * @see org.jsondb.JsonDBOperations#restore(java.lang.String, boolean)
    */
   @Override
+  @SuppressWarnings("deprecation")
   public void restore(String restorePath, boolean merge) {
     requireWritable();
-    File zipFile;
+    Path zipFile;
+    try {
+      // The String version keeps resolving the name exactly as before
+      zipFile = JsonDbArchive.resolveRestoreZipFile(restorePath).toPath();
+    } catch (IllegalArgumentException e) {
+      throw new InvalidJsonDbApiUsageException(e.getMessage());
+    }
+    restoreFrom(zipFile, merge);
+  }
+
+  /* (non-Javadoc)
+   * @see org.jsondb.JsonDBOperations#restore(java.nio.file.Path, boolean)
+   */
+  @Override
+  public void restore(Path restorePath, boolean merge) {
+    requireWritable();
+    Path zipFile;
     try {
       zipFile = JsonDbArchive.resolveRestoreZipFile(restorePath);
     } catch (IllegalArgumentException e) {
       throw new InvalidJsonDbApiUsageException(e.getMessage());
     }
-    if (!zipFile.isFile()) {
-      throw new InvalidJsonDbApiUsageException("Restore backup file not found: " + zipFile.getAbsolutePath());
+    restoreFrom(zipFile, merge);
+  }
+
+  private void restoreFrom(Path zipFile, boolean merge) {
+    if (!Files.isRegularFile(zipFile)) {
+      throw new InvalidJsonDbApiUsageException("Restore backup file not found: " + zipFile.toAbsolutePath());
     }
     if (merge) {
       restoreMerge(zipFile);
@@ -2004,34 +2044,40 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
   }
 
-  private void restoreReplace(File zipFile) {
-    File dbDirectory = dbConfig.getDbFilesLocation();
+  private void restoreReplace(Path zipFile) {
     lockAllCollectionsWrite();
     try {
-      JsonDbArchive.extractReplaceCollectionFiles(dbDirectory, zipFile);
+      JsonDbArchive.extractReplaceCollectionFiles(dbConfig.getDbFilesPath(), zipFile);
       reLoadDB();
-      logger.debug("Restored JsonDB from backup {} (replace mode)", zipFile.getAbsolutePath());
+      logger.debug("Restored JsonDB from backup {} (replace mode)", zipFile.toAbsolutePath());
     } catch (IOException e) {
-      throw new JsonDBException("Failed to restore JsonDB from backup " + zipFile.getAbsolutePath(), e);
+      throw new JsonDBException("Failed to restore JsonDB from backup " + zipFile.toAbsolutePath(), e);
     } finally {
       unlockAllCollectionsWrite();
     }
   }
 
-  private void restoreMerge(File zipFile) {
-    File tempDirectory = null;
+  private void restoreMerge(Path zipFile) {
+    Path dbDirectory = dbConfig.getDbFilesPath();
+    Path tempDirectory = null;
     try {
-      tempDirectory = Files.createTempDirectory("jsondb-restore-").toFile();
-      Map<String, File> extractedCollections = JsonDbArchive.extractToDirectory(tempDirectory, zipFile);
-      File dbDirectory = dbConfig.getDbFilesLocation();
+      // On the default file system the backup is extracted to the system's temporary folder as before.
+      // Another file system, e.g. one in memory, may have no such folder, and the database's should not
+      // spill onto disk, so the backup is extracted inside the database folder; loading skips folders.
+      if (dbDirectory.getFileSystem() == FileSystems.getDefault()) {
+        tempDirectory = Files.createTempDirectory("jsondb-restore-");
+      } else {
+        tempDirectory = Files.createTempDirectory(dbDirectory, "jsondb-restore-");
+      }
+      Map<String, Path> extractedCollections = JsonDbArchive.extractToDirectory(tempDirectory, zipFile);
 
-      for (Entry<String, File> entry : extractedCollections.entrySet()) {
+      for (Entry<String, Path> entry : extractedCollections.entrySet()) {
         String collectionName = entry.getKey();
-        File backupCollectionFile = entry.getValue();
+        Path backupCollectionFile = entry.getValue();
         CollectionMetaData cmd = cmdMap.get(collectionName);
 
         if (null == cmd) {
-          File targetFile = new File(dbDirectory, backupCollectionFile.getName());
+          Path targetFile = dbDirectory.resolve(backupCollectionFile.getFileName().toString());
           JsonDbArchive.copyCollectionFile(backupCollectionFile, targetFile);
           continue;
         }
@@ -2039,14 +2085,14 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         if (collectionExists(collectionName)) {
           mergeCollectionFromBackup(collectionName, cmd, backupCollectionFile);
         } else {
-          File targetFile = new File(dbDirectory, backupCollectionFile.getName());
+          Path targetFile = dbDirectory.resolve(backupCollectionFile.getFileName().toString());
           JsonDbArchive.copyCollectionFile(backupCollectionFile, targetFile);
           reloadCollection(collectionName);
         }
       }
-      logger.debug("Restored JsonDB from backup {} (merge mode)", zipFile.getAbsolutePath());
+      logger.debug("Restored JsonDB from backup {} (merge mode)", zipFile.toAbsolutePath());
     } catch (IOException e) {
-      throw new JsonDBException("Failed to merge JsonDB from backup " + zipFile.getAbsolutePath(), e);
+      throw new JsonDBException("Failed to merge JsonDB from backup " + zipFile.toAbsolutePath(), e);
     } finally {
       if (null != tempDirectory) {
         Util.delete(tempDirectory);
@@ -2054,7 +2100,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
     }
   }
 
-  private void mergeCollectionFromBackup(String collectionName, CollectionMetaData cmd, File backupCollectionFile) {
+  private void mergeCollectionFromBackup(String collectionName, CollectionMetaData cmd, Path backupCollectionFile) {
     List<Object> documents = readEntityDocumentsFromFile(backupCollectionFile, cmd);
     if (encrypted && cmd.hasSecret()) {
       // Backup files hold @Secret fields already encrypted and upsert encrypts them again, so decrypt first
@@ -2071,7 +2117,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   }
 
   @SuppressWarnings("unchecked")
-  private <T> List<T> readEntityDocumentsFromFile(File collectionFile, CollectionMetaData cmd) {
+  private <T> List<T> readEntityDocumentsFromFile(Path collectionFile, CollectionMetaData cmd) {
     Class<T> entity = cmd.getClazz();
     List<T> documents = new ArrayList<T>();
     JsonReader jr = null;
@@ -2085,7 +2131,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         }
       }
     } catch (IOException e) {
-      throw new JsonDBException("Failed to read documents from backup file " + collectionFile.getName(), e);
+      throw new JsonDBException("Failed to read documents from backup file " + collectionFile.getFileName(), e);
     } finally {
       if (null != jr) {
         jr.close();

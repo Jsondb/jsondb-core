@@ -20,6 +20,7 @@
  */
 package io.jsondb;
 
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -793,4 +794,20 @@ public interface JsonDBOperations {
    * @param merge whether to merge data from restore location
    */
   void restore(String restorePath, boolean merge);
+
+  /**
+   * Same as {@link #backup(String)} for a path on any file system, not necessarily the database's own
+   *
+   * @param backupPath location at which to backup the database contents
+   */
+  void backup(Path backupPath);
+
+  /**
+   * Same as {@link #restore(String, boolean)} for a path on any file system, not necessarily the
+   * database's own
+   *
+   * @param restorePath path to the backup zip file, or a directory containing {@code jsondb-backup.zip}
+   * @param merge whether to merge data from restore location
+   */
+  void restore(Path restorePath, boolean merge);
 }
