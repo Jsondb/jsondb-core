@@ -23,10 +23,14 @@ package io.jsondb.tests;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeNoException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 
 import org.junit.After;
@@ -160,5 +164,27 @@ public class MultipleInstanceTests {
     }
     String logged = loggedDuring(() -> open(dbFilesFolder).close());
     assertFalse("unexpected warning after a failed construction: " + logged, logged.contains(WARNING));
+  }
+
+  /**
+   * A folder reached through a symbolic link is the same folder, also when the first instance creates it
+   */
+  @Test
+  public void testSameFolderThroughASymbolicLinkWarns() throws Exception {
+    assertTrue(otherFolder.mkdirs());
+    Path link = dbFilesFolder.toPath();
+    try {
+      Files.createSymbolicLink(link, otherFolder.getAbsoluteFile().toPath());
+    } catch (UnsupportedOperationException | IOException e) {
+      assumeNoException("cannot create symbolic links here", e);
+    }
+    File db = new File(dbFilesFolder, "db");
+    JsonDBTemplate first = open(db);
+    try {
+      String logged = loggedDuring(() -> open(new File(otherFolder, "db")).close());
+      assertTrue("expected a warning, logged: " + logged, logged.contains(WARNING));
+    } finally {
+      first.close();
+    }
   }
 }

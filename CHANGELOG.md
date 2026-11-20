@@ -23,6 +23,15 @@
 
   JsonDB rejects an id that is null, of the wrong type or already in the collection with `InvalidJsonDbApiUsageException`, before anything is saved. The same setters are on `JsonDBConfig`.
 
+- The database folder can be given as a `java.nio.file.Path`, on any file system, not only the default one: every `JsonDBTemplate` and `JsonDBConfig` constructor that takes the folder as a `String` has a `Path` twin. For example, a database in memory with Jimfs:
+
+  ```java
+  FileSystem fs = Jimfs.newFileSystem(Configuration.unix());
+  JsonDBTemplate jsonDBTemplate = new JsonDBTemplate(fs.getPath("/db"), List.of(User.class));
+  ```
+
+  `backup()` and `restore()` still need a folder on the default file system, and `JsonDBConfig.getDbFilesLocation()` throws `UnsupportedOperationException` for one elsewhere; use `getDbFilesPath()`. Code that passes a literal `null` as the folder no longer compiles, because the call is ambiguous between the two. (#17)
+
 ### Bug fixes
 
 - In strict mode (`compatibilityMode` false), `updateCollectionSchema()` could not migrate a collection whose file still had keys the class no longer has: the file failed to load, so the update threw "Collection ... not found. Create collection first", and `createCollection()` refused because the file exists. The update now runs on the file even when the collection did not load, and loads it afterwards. (#84)

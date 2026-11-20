@@ -84,8 +84,8 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   // How many JsonDBTemplate instances in this JVM have each folder open, by canonical path. Two
   // instances on one folder each rewrite the files from their own in-memory copy and lose each
   // other's writes (issue #51). Only counts are kept, so abandoned instances can still be collected.
-  private static final ConcurrentHashMap<String, Integer> OPEN_FOLDERS = new ConcurrentHashMap<String, Integer>();
-  private String openFolderKey;
+  private static final ConcurrentHashMap<Path, Integer> OPEN_FOLDERS = new ConcurrentHashMap<Path, Integer>();
+  private Path openFolderKey;
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private Thread shutdownHook;
 
@@ -149,6 +149,87 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    */
   public JsonDBTemplate(String dbFilesLocationString, Collection<Class<?>> entityClasses, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
     this(new JsonDBConfig(dbFilesLocationString, entityClasses, cipher, compatibilityMode, schemaComparator));
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, String)} for a folder given as a Path. The folder can be on any
+   * file system, not only the default one, e.g. an in-memory one.
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param baseScanPackage the package to scan for classes annotated with {@link io.jsondb.annotation.Document}
+   */
+  public JsonDBTemplate(Path dbFilesPath, String baseScanPackage) {
+    this(dbFilesPath, baseScanPackage, null, false, null);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, String, boolean, Comparator)} for a folder given as a Path
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param baseScanPackage the package to scan for classes annotated with {@link io.jsondb.annotation.Document}
+   * @param compatibilityMode if true unknown properties in the .json files are ignored
+   * @param schemaComparator comparator for schema versions, or null for the default
+   */
+  public JsonDBTemplate(Path dbFilesPath, String baseScanPackage, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(dbFilesPath, baseScanPackage, null, compatibilityMode, schemaComparator);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, String, ICipher)} for a folder given as a Path
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param baseScanPackage the package to scan for classes annotated with {@link io.jsondb.annotation.Document}
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   */
+  public JsonDBTemplate(Path dbFilesPath, String baseScanPackage, ICipher cipher) {
+    this(dbFilesPath, baseScanPackage, cipher, false, null);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, String, ICipher, boolean, Comparator)} for a folder given as a Path
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param baseScanPackage the package to scan for classes annotated with {@link io.jsondb.annotation.Document}
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   * @param compatibilityMode if true unknown properties in the .json files are ignored
+   * @param schemaComparator comparator for schema versions, or null for the default
+   */
+  public JsonDBTemplate(Path dbFilesPath, String baseScanPackage, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(new JsonDBConfig(dbFilesPath, baseScanPackage, cipher, compatibilityMode, schemaComparator));
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, Collection)} for a folder given as a Path
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   */
+  public JsonDBTemplate(Path dbFilesPath, Collection<Class<?>> entityClasses) {
+    this(dbFilesPath, entityClasses, null, false, null);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, Collection, ICipher)} for a folder given as a Path
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   */
+  public JsonDBTemplate(Path dbFilesPath, Collection<Class<?>> entityClasses, ICipher cipher) {
+    this(dbFilesPath, entityClasses, cipher, false, null);
+  }
+
+  /**
+   * Same as {@link #JsonDBTemplate(String, Collection, ICipher, boolean, Comparator)} for a folder given as a Path
+   *
+   * @param dbFilesPath the folder that holds the collection .json files
+   * @param entityClasses the classes annotated with {@link io.jsondb.annotation.Document} to use as collections
+   * @param cipher cipher used for {@link io.jsondb.annotation.Secret} fields, or null for no encryption
+   * @param compatibilityMode if true unknown properties in the .json files are ignored
+   * @param schemaComparator comparator for schema versions, or null for the default
+   */
+  public JsonDBTemplate(Path dbFilesPath, Collection<Class<?>> entityClasses, ICipher cipher, boolean compatibilityMode, Comparator<String> schemaComparator) {
+    this(new JsonDBConfig(dbFilesPath, entityClasses, cipher, compatibilityMode, schemaComparator));
   }
 
   /**
@@ -302,18 +383,34 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   }
 
   private void registerOpenFolder() {
-    File folder = dbConfig.getDbFilesLocation();
-    try {
-      openFolderKey = folder.getCanonicalPath();
-    } catch (IOException e) {
-      openFolderKey = folder.getAbsolutePath();
-    }
+    openFolderKey = realPathOf(dbConfig.getDbFilesPath());
     int open = OPEN_FOLDERS.merge(openFolderKey, 1, Integer::sum);
     if (open > 1) {
       logger.warn("JsonDB folder {} is already open by another JsonDBTemplate in this JVM ({} instances now)."
           + " Instances on the same folder lose each other's writes: share one JsonDBTemplate between threads,"
           + " or close() the other instance first. A future release will refuse to open a folder twice (issue #51).",
           openFolderKey, open);
+    }
+  }
+
+  /**
+   * @return the folder's absolute path with symbolic links resolved, also when the folder does not exist
+   *     yet: the part that exists is resolved and the rest appended. Path keys, unlike strings, tell apart
+   *     folders of the same name on different file systems.
+   */
+  private static Path realPathOf(Path folder) {
+    Path absolute = folder.toAbsolutePath().normalize();
+    Path existing = absolute;
+    while (null != existing && !Files.exists(existing)) {
+      existing = existing.getParent();
+    }
+    if (null == existing) {
+      return absolute;
+    }
+    try {
+      return existing.toRealPath().resolve(existing.relativize(absolute));
+    } catch (IOException e) {
+      return absolute;
     }
   }
 
