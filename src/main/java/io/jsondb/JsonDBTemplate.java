@@ -176,6 +176,26 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
   }
 
   /**
+   * Sets the IdGenerator for every collection that has none of its own, see
+   * {@link JsonDBConfig#setIdGenerator(IdGenerator)}
+   *
+   * @param idGenerator the generator, or null for JsonDB's built-in ids
+   */
+  public void setIdGenerator(IdGenerator idGenerator) {
+    dbConfig.setIdGenerator(idGenerator);
+  }
+
+  /**
+   * Sets the IdGenerator for one collection's class, see {@link JsonDBConfig#setIdGenerator(Class, IdGenerator)}
+   *
+   * @param entityClass the {@link io.jsondb.annotation.Document} class
+   * @param idGenerator the generator, or null to use the default one again
+   */
+  public void setIdGenerator(Class<?> entityClass, IdGenerator idGenerator) {
+    dbConfig.setIdGenerator(entityClass, idGenerator);
+  }
+
+  /**
    * @return true if the database was opened read-only, see {@link JsonDBConfig#setReadOnly(boolean)}
    */
   public boolean isReadOnly() {
@@ -255,8 +275,9 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
    * @return the ids for a batch's documents that have none, never one already in the collection or
    *     set on another document of the batch
    */
-  private static IdSequence idSequenceFor(CollectionMetaData cmd, Map<Object, ?> collection, Collection<?> batch) {
-    IdSequence ids = new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet());
+  private IdSequence idSequenceFor(CollectionMetaData cmd, Map<Object, ?> collection, Collection<?> batch) {
+    IdSequence ids = new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet(),
+        dbConfig.getIdGenerator(cmd.getClazz()), cmd.getCollectionName());
     for (Object document : batch) {
       ids.reserve(Util.getIdForEntity(document, cmd.getIdAnnotatedFieldGetterMethod()));
     }
@@ -1154,7 +1175,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       }
       if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
         id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod(),
-            new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet()).next());
+            idSequenceFor(cmd, collection, Collections.emptyList()).next(objToSave));
       } else if (collection.containsKey(id)) {
         throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
       }
@@ -1205,7 +1226,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
           CryptoUtil.encryptFields(obj, cmd, dbConfig.getCipher());
         }
         if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
-          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod(), ids.next());
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod(), ids.next(obj));
         } else if (collection.containsKey(id)) {
           throw new InvalidJsonDbApiUsageException("Object already present in Collection. Use Update or Upsert operation instead of Insert");
         }
@@ -1417,7 +1438,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
       boolean insert = true;
       if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
         id = Util.setIdForEntity(objToSave, cmd.getIdAnnotatedFieldSetterMethod(),
-            new IdSequence(cmd.getIdAnnotatedFieldType(), collection.keySet()).next());
+            idSequenceFor(cmd, collection, Collections.emptyList()).next(objToSave));
       } else if (collection.containsKey(id)) {
         insert = false;
       }
@@ -1477,7 +1498,7 @@ public class JsonDBTemplate implements JsonDBOperations, AutoCloseable {
         }
         boolean insert = true;
         if (IdSequence.isMissing(id, cmd.getIdAnnotatedFieldType())) {
-          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod(), ids.next());
+          id = Util.setIdForEntity(obj, cmd.getIdAnnotatedFieldSetterMethod(), ids.next(obj));
         } else if (collection.containsKey(id)) {
           insert = false;
         }

@@ -31,7 +31,9 @@ import java.lang.annotation.Target;
 /**
  * Marks the field that holds a document's id. Every {@link Document} class needs one.
  *
- * <p>When a document is inserted or upserted without an id, JsonDB generates one:</p>
+ * <p>When a document is inserted or upserted without an id, JsonDB generates one. An
+ * {@link io.jsondb.IdGenerator} set for the collection, see
+ * {@link io.jsondb.JsonDBConfig#setIdGenerator(Class, io.jsondb.IdGenerator)}, supplies it; otherwise:</p>
  * <ul>
  *   <li>a {@code Long}, {@code Integer}, {@code long} or {@code int} id gets the next number after the
  *       highest id in the collection, starting at 1. For {@code long} and {@code int}, which cannot be

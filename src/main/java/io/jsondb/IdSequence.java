@@ -20,28 +20,38 @@
  */
 package io.jsondb;
 
+import java.lang.invoke.MethodType;
 import java.util.Collection;
 import java.util.UUID;
 
 /**
- * Hands out the ids for the documents of one insert or upsert that are saved without one. A numeric
- * {@link io.jsondb.annotation.Id} (Long, Integer, long or int) gets the next number after the highest
- * id in the collection and in the batch; any other gets a random UUID.
+ * Hands out the ids for the documents of one insert or upsert that are saved without one. With an
+ * {@link IdGenerator} the generator supplies them. Otherwise a numeric {@link io.jsondb.annotation.Id}
+ * (Long, Integer, long or int) gets the next number after the highest id in the collection and in the
+ * batch, and any other gets a random UUID.
  *
  * The numbers are not stored anywhere but in the documents, so when the document with the highest id
  * is removed, that id is handed out again.
  */
 final class IdSequence {
   private final Class<?> idType;
+  private final Collection<?> existingIds;
+  private final IdGenerator idGenerator;
+  private final String collectionName;
   private final long maxValue;
   private long last;
 
   /**
    * @param idType the type of the collection's @Id field
    * @param existingIds the ids already in the collection
+   * @param idGenerator the collection's IdGenerator, or null for the built-in ids
+   * @param collectionName the collection, passed to the IdGenerator
    */
-  IdSequence(Class<?> idType, Collection<?> existingIds) {
+  IdSequence(Class<?> idType, Collection<?> existingIds, IdGenerator idGenerator, String collectionName) {
     this.idType = idType;
+    this.existingIds = existingIds;
+    this.idGenerator = idGenerator;
+    this.collectionName = collectionName;
     this.maxValue = isIntegerType(idType) ? Integer.MAX_VALUE : Long.MAX_VALUE;
     for (Object id : existingIds) {
       reserve(id);
@@ -55,6 +65,31 @@ final class IdSequence {
     if (isNumeric(idType) && id instanceof Number) {
       last = Math.max(last, ((Number) id).longValue());
     }
+  }
+
+  /**
+   * @param document the document that gets the id, passed to the IdGenerator
+   * @throws InvalidJsonDbApiUsageException if the IdGenerator returns null, an id of the wrong type or one
+   *     already in the collection, or a numeric id type has no number left
+   */
+  Object next(Object document) {
+    if (null != idGenerator) {
+      Object id = idGenerator.generateId(collectionName, document);
+      if (null == id) {
+        throw new InvalidJsonDbApiUsageException("The IdGenerator of collection " + collectionName + " returned null");
+      }
+      if (!boxed(idType).isInstance(id)) {
+        throw new InvalidJsonDbApiUsageException("The IdGenerator of collection " + collectionName + " returned "
+            + id + ", which is not a " + boxed(idType).getSimpleName() + " like the @Id field");
+      }
+      // Saving it would replace the document that has it in memory and leave both in the file
+      if (existingIds.contains(id)) {
+        throw new InvalidJsonDbApiUsageException("The IdGenerator of collection " + collectionName + " returned "
+            + id + ", which is already in collection " + collectionName);
+      }
+      return id;
+    }
+    return next();
   }
 
   /**
@@ -84,6 +119,13 @@ final class IdSequence {
       return true;
     }
     return idType != null && idType.isPrimitive() && isNumeric(idType) && ((Number) id).longValue() == 0;
+  }
+
+  /**
+   * @return the wrapper class of a primitive type, e.g. Integer for int, or the type itself
+   */
+  private static Class<?> boxed(Class<?> type) {
+    return MethodType.methodType(type).wrap().returnType();
   }
 
   private static boolean isNumeric(Class<?> type) {

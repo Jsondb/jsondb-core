@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,6 +55,8 @@ public class JsonDBConfig {
   private boolean compatibilityMode;
   private volatile boolean syncFolderOnWrite;
   private boolean readOnly;
+  private volatile IdGenerator defaultIdGenerator;
+  private final Map<Class<?>, IdGenerator> idGenerators = new ConcurrentHashMap<Class<?>, IdGenerator>();
 
   //References
   private ObjectMapper objectMapper;
@@ -175,6 +179,38 @@ public class JsonDBConfig {
    */
   public void setReadOnly(boolean readOnly) {
     this.readOnly = readOnly;
+  }
+
+  /**
+   * Sets the IdGenerator for every collection that has none of its own.
+   *
+   * @param idGenerator the generator, or null for JsonDB's built-in ids
+   */
+  public void setIdGenerator(IdGenerator idGenerator) {
+    this.defaultIdGenerator = idGenerator;
+  }
+
+  /**
+   * Sets the IdGenerator for one collection's class, in place of the default one.
+   *
+   * @param entityClass the {@link io.jsondb.annotation.Document} class
+   * @param idGenerator the generator, or null to use the default one again
+   */
+  public void setIdGenerator(Class<?> entityClass, IdGenerator idGenerator) {
+    if (null == idGenerator) {
+      idGenerators.remove(entityClass);
+    } else {
+      idGenerators.put(entityClass, idGenerator);
+    }
+  }
+
+  /**
+   * @param entityClass the {@link io.jsondb.annotation.Document} class
+   * @return the class's IdGenerator, else the default one, else null for JsonDB's built-in ids
+   */
+  public IdGenerator getIdGenerator(Class<?> entityClass) {
+    IdGenerator idGenerator = idGenerators.get(entityClass);
+    return null != idGenerator ? idGenerator : defaultIdGenerator;
   }
   public ObjectMapper getObjectMapper() {
     return objectMapper;
