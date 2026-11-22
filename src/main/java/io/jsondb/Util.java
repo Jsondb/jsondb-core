@@ -31,8 +31,11 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.text.ParseException;
 import java.util.*;
 
@@ -209,7 +212,9 @@ public class Util {
    * @param f  the target .json file on which to stamp the version
    * @param version  the actual version string to stamp
    * @return true if success.
+   * @deprecated use {@link #stampVersion(JsonDBConfig, Path, String)}
    */
+  @Deprecated
   public static boolean stampVersion(JsonDBConfig dbConfig, File f, String version) {
     return stampVersion(dbConfig, f.toPath(), version);
   }
@@ -272,13 +277,56 @@ public class Util {
   /**
    * Utility to delete directory recursively
    * @param f  File object representing the directory to recursively delete
+   * @deprecated use {@link #delete(Path)}, which deletes a symbolic link instead of the contents of the
+   *     folder it points to
    */
+  @Deprecated
   public static void delete(File f) {
     if (f.isDirectory()) {
       for (File c : f.listFiles())
         delete(c);
     }
     f.delete();
+  }
+
+  /**
+   * Deletes a file, or a folder with everything in it, as far as it can: what cannot be deleted is left
+   * in place. Symbolic links are deleted, not followed. A path that does not exist is ignored.
+   *
+   * @param path the file or folder to delete
+   */
+  public static void delete(Path path) {
+    try {
+      Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+          deleteQuietly(file);
+          return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException e) {
+          deleteQuietly(file);
+          return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException e) {
+          deleteQuietly(dir);
+          return FileVisitResult.CONTINUE;
+        }
+      });
+    } catch (IOException e) {
+      // The visitor handles every failure itself, so walkFileTree does not throw
+    }
+  }
+
+  private static void deleteQuietly(Path path) {
+    try {
+      Files.deleteIfExists(path);
+    } catch (IOException e) {
+      logger.debug("Failed to delete {}", path, e);
+    }
   }
 
   /**

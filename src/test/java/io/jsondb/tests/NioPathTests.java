@@ -185,4 +185,36 @@ public class NioPathTests {
     names.sort(null);
     return names;
   }
+
+  @Test
+  public void deleteRemovesAFolderTree() throws IOException {
+    try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
+      Path folder = Files.createDirectories(fs.getPath("/tree/a/b"));
+      Files.createFile(folder.resolve("c.json"));
+      Files.createFile(fs.getPath("/tree/d.json"));
+
+      Util.delete(fs.getPath("/tree"));
+
+      assertFalse(Files.exists(fs.getPath("/tree")));
+      Util.delete(fs.getPath("/tree"));
+    }
+  }
+
+  /**
+   * Deleting a folder that holds a symbolic link to another folder removes the link, not what it points to
+   */
+  @Test
+  public void deleteDoesNotFollowSymbolicLinks() throws IOException {
+    try (FileSystem fs = Jimfs.newFileSystem(Configuration.unix())) {
+      Path keep = Files.createDirectories(fs.getPath("/keep"));
+      Files.createFile(keep.resolve("instances.json"));
+      Path tree = Files.createDirectories(fs.getPath("/tree"));
+      Files.createSymbolicLink(tree.resolve("link"), keep);
+
+      Util.delete(tree);
+
+      assertFalse(Files.exists(tree));
+      assertTrue(Files.exists(keep.resolve("instances.json")));
+    }
+  }
 }

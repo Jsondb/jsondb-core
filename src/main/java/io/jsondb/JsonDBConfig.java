@@ -154,9 +154,10 @@ public class JsonDBConfig {
   }
   /**
    * @return the database folder as a File
-   * @throws UnsupportedOperationException if the folder is not on the default file system, use
-   *     {@link #getDbFilesPath()} instead
+   * @throws UnsupportedOperationException if the folder is not on the default file system
+   * @deprecated use {@link #getDbFilesPath()}, which works for a folder on any file system
    */
+  @Deprecated
   public File getDbFilesLocation() {
     return dbFilesPath.toFile();
   }

@@ -81,6 +81,10 @@ public class JsonWriter {
   
   private FileChannel channel;
 
+  /**
+   * @deprecated use {@link #JsonWriter(JsonDBConfig, CollectionMetaData, String, Path)}
+   */
+  @Deprecated
   public JsonWriter(JsonDBConfig dbConfig, CollectionMetaData cmd, String collectionName, File collectionFile) throws IOException {
     this(dbConfig, cmd, collectionName, collectionFile.toPath());
   }
