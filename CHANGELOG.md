@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.93
+
 ### New features
 
 - A database can be opened read-only, e.g. on a read-only mount or to read another application's data safely. Collections load without lock files, so the folder does not have to be writable, and every operation that would change the database (insert, save, upsert, remove, the find-and-modify/remove operations, creating or dropping collections, schema updates, `changeEncryption` and `restore`) throws `InvalidJsonDbApiUsageException`. `JsonDBTemplate` gains a public constructor that takes a `JsonDBConfig`:
