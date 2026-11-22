@@ -18,12 +18,12 @@ JsonDB runs on Java 8 or later. It is published to Maven Central:
 <dependency>
   <groupId>io.jsondb</groupId>
   <artifactId>jsondb-core</artifactId>
-  <version>1.1.63</version>
+  <version>1.1.93</version>
 </dependency>
 ```
 
 ```groovy
-implementation 'io.jsondb:jsondb-core:1.1.63'
+implementation 'io.jsondb:jsondb-core:1.1.93'
 ```
 
 On Android (API 26+) or under OSGi, where package scanning cannot find your classes, pass the entity classes directly:
