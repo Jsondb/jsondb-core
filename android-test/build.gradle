@@ -19,5 +19,5 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 plugins {
-    id 'com.android.application' version '9.5.1' apply false
+    id 'com.android.application' version '9.5.2' apply false
 }
